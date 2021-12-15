@@ -1,0 +1,13 @@
+.gitlab-ci*
+.editorconfig
+.eslint*
+rollup.config.js
+lib
+bin
+.babelrc
+.prettierignore
+.prettierrc
+.releaserc
+CODEOWNERS
+.idea
+.commitlintrc.json
