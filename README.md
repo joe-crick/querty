@@ -3,7 +3,7 @@
 
 ## Querty is currently in _Alpha_
 
-While Querty's MVP is complete, it is still undergoing initial testing.
+While Querty's MVP is complete, it is still undergoing initial testing, and development.
 I wouldn't use it for anything much more than playing around at this point.
 
 ## Table of contents
