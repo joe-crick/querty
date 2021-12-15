@@ -4,33 +4,34 @@ import joiner from "array-join";
 import { makeArray } from "./makeArray.mjs";
 
 export function createReturnStructure(rawData, entities, fields, conditions = {}) {
-  let resultSet = getEntityScopedResult(entities, rawData, fields, conditions?.joinCond);
+  const resultSet = getEntityScopedResult(entities, rawData, fields, conditions?.joinCond);
 
   // TODO calculations?
-  if (conditions && conditions.join) {
-    const [firstJoin] = conditions.join;
-    const joinType = camelCase(firstJoin.replace(/\s/, "_"));
-    const joinConds = conditions.joinCond;
-    const values = Object.values(resultSet);
+  return conditions && conditions.join ? joinResults(conditions, resultSet) : resultSet;
+}
 
-    const [first, second, ...rest] = values;
-    const keys = joinConds[0];
-    const joinKeys = { key1: keys[0], key2: keys[1] };
-    let base = joiner[joinType](makeArray(first), makeArray(second), joinKeys);
+function joinResults(conditions, resultSet) {
+  const [firstJoin] = conditions.join;
+  const joinType = camelCase(firstJoin.replace(/\s/, "_"));
+  const joinConds = conditions.joinCond;
+  const values = Object.values(resultSet);
 
-    if (rest.length > 0) {
-      for (let x = 0; x < rest.length; x++) {
-        const nextIdx = x + 1;
-        const firstJoin = conditions.join[nextIdx];
-        const joinType = camelCase(firstJoin.replace(/\s/, "_"));
-        const keys = joinConds[nextIdx];
-        const joinKeys = { key1: keys[0], key2: keys[1] };
-        base = joiner[joinType](base, rest[x], joinKeys);
-      }
+  const [first, second, ...rest] = values;
+  const keys = joinConds[0];
+  const joinKeys = { key1: keys[0], key2: keys[1] };
+  let base = joiner[joinType](makeArray(first), makeArray(second), joinKeys);
+
+  if (rest.length > 0) {
+    for (let x = 0; x < rest.length; x++) {
+      const nextIdx = x + 1;
+      const firstJoin = conditions.join[nextIdx];
+      const joinType = camelCase(firstJoin.replace(/\s/, "_"));
+      const keys = joinConds[nextIdx];
+      const joinKeys = { key1: keys[0], key2: keys[1] };
+      base = joiner[joinType](base, rest[x], joinKeys);
     }
-    resultSet = base;
   }
-  return resultSet;
+  return base;
 }
 
 function getEntityScopedResult(entities, result, fields, joinCond) {
