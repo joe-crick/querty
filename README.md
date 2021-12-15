@@ -1,5 +1,5 @@
 
-# <img src='https://raw.githubusercontent.com/joe-crick/querty/main/Querty.png' height='60' alt='Querty Logo' aria-label='querty' /> Querty
+# <img src='https://raw.githubusercontent.com/joe-crick/querty/master/Querty.png' height='60' alt='Querty Logo' aria-label='querty' /> Querty
 
 ## Querty is currently in _Alpha_
 
