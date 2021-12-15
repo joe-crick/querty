@@ -48,7 +48,7 @@ a few standard features. However, it is also designed to be extensible. This way
 you will use Querty. This also helps to keep Querty small.
 
 For example, by default, Querty only works in the Browser. If you need to use it in Node (or have an Isomorphic http client), 
-you can do so quite easily---it takes only two steps. See [Use with Node](#use-with-node) for more information. Other options
+you can do so quite easily. It takes only two steps. See [Use with Node](#use-with-node) for more information. Other options
 for extending Querty are detailed below.
 
 #### Change the way you think about working with API Data
