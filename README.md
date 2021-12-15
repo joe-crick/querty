@@ -44,11 +44,12 @@ getData(12);
 **NOTE**:
 
 Querty is designed to have a minimum of functionalty out of the box, focusing on its core value propositions, and 
-a few standard features. However, it is also designed to be extensable. This way, you have more control over how 
-you will use Querty.xThis also helps to keep Querty small.
+a few standard features. However, it is also designed to be extensible. This way, you have more control over how 
+you will use Querty. This also helps to keep Querty small.
 
 For example, by default, Querty only works in the Browser. If you need to use it in Node (or have an Isomorphic http client), 
-you can do so quite easily---it takes only two steps. See [Use with Node](#use-with-node) for more information.
+you can do so quite easily---it takes only two steps. See [Use with Node](#use-with-node) for more information. Other options
+for extending Querty are detailed below.
 
 #### Change the way you think about working with API Data
 
@@ -180,6 +181,8 @@ const config = {
   nodeProvider
 };
 ```
+
+Afer implementing this configuration, Querty will be Isomorphic.
 
 #### Return Data
 
@@ -487,14 +490,11 @@ const app = new Vue({
 });
 ```
 
-#### Request Interception and other Extras
+#### Request Interception
 
 Querty does not come with an interceptor built in. However, because it uses `fetch` internally, you can intercept
 requests using [`fetch-intercept`](https://www.npmjs.com/package/fetch-intercept) (which,
-according to the docs, also supports Node). This is by design. Querty is designed to have a minimum of functionalty
-by default, focusing only on its core value proposition. However, it is also designed to be extensable for those
-times when you may need extra functionality, such as interception. By not coupling non-core functionality we
-allow you to control when and where you will use Querty, not just how.
+according to the docs, also supports Node). For more information, see the `fetch-intercept` docs.
 
 #### Cancellation
 
