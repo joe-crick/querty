@@ -71,6 +71,9 @@
     "http",
     "ajax",
     "promise",
-    "node"
+    "node",
+    "isomorphic",
+    "fetch",
+    "http-client"
   ]
 }
