@@ -31,7 +31,6 @@ export default [
       }),
       commonjs(),
       terser()
-    ],
-    external: ["simple-get"]
+    ]
   }
 ];
