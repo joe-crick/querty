@@ -171,7 +171,7 @@ await exec(`UPDATE posts WHERE id = 1`, { title: "Alfred Schmidt", body: "Frankf
 Stand alone Querty only works in the Browser. However, making Querty Isomorphic (enabling it to work in Node and the Browser) 
 is quite simple. 
 
-1. Install [querty-node](https://npmjs.com/packages/querty-node).
+1. Install [querty-node](https://npmjs.com/package/querty-node).
 2. Add the following to your Querty `config`:
 
 ```javascript
