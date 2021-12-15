@@ -19,6 +19,7 @@ I wouldn't use it for anything much more than playing around at this point.
 - [Request Interception and other Extras](#request-interception-and-other-extras)
 - [Cancellation](#cancellation)
 - [Data Extraction](#data-extraction)
+- [Performance](#performance)
 
 ### Querty A New (old) Paradigm for Data Access
 
@@ -545,7 +546,7 @@ getData(12);
 #### Performance
 
 In our preliminary tests, we found that Querty was quite performant! 
-In one test, it outpeformed a major http-client by 4 to 1. We'd rather not name names. Rather, we encourage you to test it 
+In one test, it outpeformed a major http-client by 4 to 1. We'd perfer to not name names. Rather, we encourage you to test it 
 for yourself.
 
 For more information on Querty, see the Querty Book (coming "soon").
