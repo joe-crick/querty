@@ -47,6 +47,12 @@ export const config = {
   },
   set cancel(controller) {
     _config.cancelController = controller;
+  },
+  hasNodeProvider() {
+    return  _config.hasOwnProperty("nodeProvider");
+  },
+  getNodeProvider() {
+   return _config.nodeProvider; 
   }
 };
 

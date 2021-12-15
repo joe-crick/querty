@@ -13,12 +13,14 @@ import selectInnerJoin from "./test-data/select/select-inner-join.json";
 import selectMultiTableJoin from "./test-data/select/select-multi-table-join.json";
 import selectAliasedSubset from "./test-data/select/select-aliased-subset.json";
 import selectQueryParam from "./test-data/select/select-query-parameters.json";
+import { nodeProvider } from "querty-node";
 
 const config = {
   apiUrl: "https://jsonplaceholder.typicode.com",
   dataExtractor(data) {
     return data;
-  }
+  },
+  nodeProvider
 };
 
 describe("select", () => {

@@ -1,10 +1,12 @@
 import { exec, setConfig } from "../src/querty.mjs";
+import { nodeProvider } from "querty-node";
 
 const config = {
   apiUrl: "https://jsonplaceholder.typicode.com",
   dataExtractor(data) {
     return data;
-  }
+  },
+  nodeProvider
 };
 
 describe("delete", () => {

@@ -1,11 +1,13 @@
 import { exec, setConfig } from "../src/querty.mjs";
 import updateSimple from "./test-data/update/simple-update.json";
+import { nodeProvider } from "querty-node";
 
 const config = {
   apiUrl: "https://jsonplaceholder.typicode.com",
   dataExtractor(data) {
     return data;
-  }
+  },
+  nodeProvider
 };
 
 describe("update", () => {

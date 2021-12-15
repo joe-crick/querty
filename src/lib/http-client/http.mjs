@@ -1,4 +1,3 @@
-import get from "simple-get";
 import { config } from "../config.mjs";
 import { isNodejs } from "../is-node.mjs";
 import objectToQueryParams from "object-to-query-params";
@@ -30,8 +29,8 @@ function run(url, method, data) {
     ...config.options
   };
 
-  const requester = isNode ? nodeRequest : fetchRequest;
-  return config.hasPolicy(url) ? config.getPolicy(url).execute(() => requester(opts)) : requester(opts);
+  const requester = isNode && config.hasNodeProvider() ? config.getNodeProvider() : fetchRequest;
+  return config.hasPolicy(url) ? config.getPolicy(url).execute(() => requester(opts, 0, config)) : requester(opts, 0, config);
 }
 
 async function tryRefreshToken(opts) {
@@ -65,32 +64,6 @@ async function fetchRequest(opts, iterations = 0) {
       status: response.status,
       data: config.dataExtractor(data)
     };
-  }
-}
-
-async function nodeRequest(opts, iterations = 0) {
-  try {
-    config.cancel = { abort: () => {} };
-    const request = await new Promise((resolve, reject) => {
-      get.concat(opts, function (err, res, data) {
-        if (err || !/2\d{2}/.test(res.statusCode.toString())) {
-          reject(err || res.statusCode);
-        } else {
-          resolve({
-            status: res.statusCode,
-            data: config.dataExtractor(data)
-          });
-        }
-      });
-    });
-    return request;
-  } catch (error) {
-    if (shouldCheckRefreshToken(error, iterations)) {
-      const newOpts = await tryRefreshToken(opts);
-      return nodeRequest(newOpts, 1);
-    } else {
-      throw new Error(error);
-    }
   }
 }
 

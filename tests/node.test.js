@@ -10,15 +10,10 @@ const config = {
   nodeProvider
 };
 
-describe("create", () => {
-  it("should create an entity on an endpoint with SQL syntax", async () => {
+describe("node-test", () => {
+  it("should use node", async () => {
     setConfig(config);
     const state = await exec("INSERT INTO posts (userId, title, body) VALUES (1, 'test title', 'another value here')");
-    expect(state).toEqual(createSimple);
-  });
-  it("should create an entity on an endpoint with data", async () => {
-    setConfig(config);
-    const state = await exec("INSERT INTO posts", { userId: 1, title: "test title", body: "another value here" });
     expect(state).toEqual(createSimple);
   });
 });

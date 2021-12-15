@@ -16,7 +16,7 @@ I wouldn't use it for anything much more than playing around at this point.
 - [Query Parameters](#query-parameters)
 - [Headers and Authentication](#headers-and-authentication)
 - [Cockatiel Policies](#cockatiel-policies)
-- [Request Interception](#request-interception)
+- [Request Interception and other Extras](#request-interception-and-other-extras)
 - [Cancellation](#cancellation)
 - [Data Extraction](#data-extraction)
 
@@ -40,6 +40,15 @@ async function getData(id) {
 
 getData(12);
 ```
+
+**NOTE**:
+
+Querty is designed to have a minimum of functionalty out of the box, focusing on its core value propositions, and 
+a few standard features. However, it is also designed to be extensable. This way, you have more control over how 
+you will use Querty.xThis also helps to keep Querty small.
+
+For example, by default, Querty only works in the Browser. If you need to use it in Node (or have an Isomorphic http client), 
+you can install [querty-node](https://npmjs.com/package/querty-node). See [Use with Node](#use-with-node) for more information.
 
 #### Change the way you think about working with API Data
 
@@ -153,6 +162,23 @@ await exec(`UPDATE posts SET title = 'Alfred Schmidt', body = 'Frankfurt' WHERE 
 
 // Update using Querty Object syntax
 await exec(`UPDATE posts WHERE id = 1`, { title: "Alfred Schmidt", body: "Frankfurt" });
+```
+
+#### Use with Node
+
+Stand alone Querty only works in the Browser. However, making Querty Isomorphic (enabling it to work in Node && the Browser) 
+is quite simple. 
+
+1. Install [querty-node](https://npmjs.com/packages/querty-node).
+2. Add the following to your Querty `config`:
+
+```javascript
+import { nodeProvider } from "querty-node";
+
+const config = {
+  apiUrl: "https://my-api.com",
+  nodeProvider
+};
 ```
 
 #### Return Data
@@ -461,11 +487,14 @@ const app = new Vue({
 });
 ```
 
-#### Request Interception
+#### Request Interception and other Extras
 
 Querty does not come with an interceptor built in. However, because it uses `fetch` internally, you can intercept
 requests using [`fetch-intercept`](https://www.npmjs.com/package/fetch-intercept) (which,
-according to the docs, also supports Node).
+according to the docs, also supports Node). This is by design. Querty is designed to have a minimum of functionalty
+by default, focusing only on its core value proposition. However, it is also designed to be extensable for those
+times when you may need extra functionality, such as interception. By not coupling non-core functionality we
+allow you to control when and where you will use Querty, not just how.
 
 #### Cancellation
 
