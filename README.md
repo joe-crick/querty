@@ -549,6 +549,6 @@ In our preliminary tests, we found that Querty was quite performant!
 In one test, it outpeformed a major http-client by 4 to 1. We'd perfer to not name names. Rather, we encourage you to test it 
 for yourself.
 
-For more information on Querty, see the Querty Book (coming "soon").
+
 
 _Proudly written in JavaScript_
