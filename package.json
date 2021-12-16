@@ -1,6 +1,6 @@
 {
   "name": "querty",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "querty - a query-based http client",
   "repository": {
     "url": "https://github.com/joe-crick/querty"
