@@ -3,11 +3,11 @@ import camelCase from "to-camel-case";
 import joiner from "array-join";
 import { makeArray } from "./makeArray.mjs";
 
-export function createReturnStructure(rawData, entities, fields, conditions = {}) {
+export function createReturnStructure(rawData, entities, fields, conditions = {}, resultSetFilter) {
   const resultSet = getEntityScopedResult(entities, rawData, fields, conditions?.joinCond);
+  const results = conditions && conditions.join ? joinResults(conditions, resultSet) : resultSet;
 
-  // TODO calculations?
-  return conditions && conditions.join ? joinResults(conditions, resultSet) : resultSet;
+  return resultSetFilter(results);
 }
 
 function joinResults(conditions, resultSet) {

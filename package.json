@@ -15,7 +15,7 @@
     "lint": "eslint src/lib/**/*.ts tests/**/*.js --fix --max-warnings=0",
     "prettify:all": "prettier --write \"**/*.js*\"",
     "test": "jest --watch",
-    "test:once": "jest -t"
+    "test:once": "jest -t \"addons\""
   },
   "author": "joe crick",
   "license": "MIT",

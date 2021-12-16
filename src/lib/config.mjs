@@ -49,10 +49,16 @@ export const config = {
     _config.cancelController = controller;
   },
   hasNodeProvider() {
-    return  _config.hasOwnProperty("nodeProvider");
+    return _config.hasOwnProperty("nodeProvider");
   },
   getNodeProvider() {
-   return _config.nodeProvider; 
+    return _config.nodeProvider;
+  },
+  hasAddons() {
+    return _config.hasOwnProperty("addons");
+  },
+  getAddons() {
+    return _config.addons;
   }
 };
 

@@ -4,6 +4,7 @@ import { removeEntity } from "./lib/http-client/delete.mjs";
 import { getEntities } from "./lib/http-client/get.mjs";
 import { createEntity } from "./lib/http-client/post.mjs";
 import { updateEntity } from "./lib/http-client/put.mjs";
+import { getAddonParsers } from "./lib/addons.mjs";
 
 export { setConfig } from "./lib/config.mjs";
 
@@ -17,6 +18,7 @@ const methodMap = {
 export async function exec(query, data) {
   const [sqlCommand] = getSqlCommand(query);
   const cmd = commandMap[sqlCommand.toLowerCase()];
+  const addons = getAddonParsers();
 
-  return methodMap[cmd](query, data);
+  return methodMap[cmd](query, data, addons);
 }
