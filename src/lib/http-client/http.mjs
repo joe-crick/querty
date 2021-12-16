@@ -1,6 +1,7 @@
 import { config } from "../config.mjs";
 import { isNodejs } from "../is-node.mjs";
 import objectToQueryParams from "object-to-query-params";
+import { standardiseEndSlash } from "../standardise-end-slash.mjs";
 
 const isNode = isNodejs();
 
@@ -21,27 +22,34 @@ export const http = {
 
 function run(url, method, data) {
   const isGetData = data && method === "GET";
+  const customPath = config.path.hasOwnProperty(url);
+  const host = standardiseEndSlash(customPath && customPath.url || config.apiUrl);
+  const options = customPath && customPath.options || config.options;
   const opts = {
     method,
-    url: `${config.apiUrl}/${url}${isGetData ? `?${objectToQueryParams(data)}` : ""}`,
+    url: `${host}/${url}${isGetData ? `?${objectToQueryParams(data)}` : ""}`,
     json: true,
     ...(!isGetData ? { body: data } : {}),
-    ...config.options
+    ...options
   };
 
   const requester = isNode && config.hasNodeProvider() ? config.getNodeProvider() : fetchRequest;
-  return config.hasPolicy(url) ? config.getPolicy(url).execute(() => requester(opts, 0, config)) : requester(opts, 0, config);
+  return config.hasPolicy(url)
+    ? config.getPolicy(url).execute(() => requester(opts, 0, config, url))
+    : requester(opts, 0, config, url);
 }
 
-async function tryRefreshToken(opts) {
-  await config.refresh();
+async function tryRefreshToken(opts, url) {
+  await config.refresh(url);
+  const customPath = config.path.hasOwnProperty(url);
+  const options = customPath && customPath.options || config.options;
   return {
     ...opts,
-    headers: config.options.headers
+    headers: options.headers
   };
 }
 
-async function fetchRequest(opts, iterations = 0) {
+async function fetchRequest(opts, iterations = 0, _, url) {
   let controller, signal;
   if (config.hasCancel()) {
     controller = new AbortController();
@@ -56,7 +64,7 @@ async function fetchRequest(opts, iterations = 0) {
   });
 
   if (shouldCheckRefreshToken(response.status, iterations)) {
-    const newOpts = await tryRefreshToken(opts);
+    const newOpts = await tryRefreshToken(opts, url);
     return fetchRequest(newOpts, 1);
   } else {
     const data = await response.json();

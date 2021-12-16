@@ -15,7 +15,7 @@
     "lint": "eslint src/lib/**/*.ts tests/**/*.js --fix --max-warnings=0",
     "prettify:all": "prettier --write \"**/*.js*\"",
     "test": "jest --watch",
-    "test:once": "jest -t \"addons\""
+    "test:once": "jest -t"
   },
   "author": "joe crick",
   "license": "MIT",
@@ -47,6 +47,7 @@
     "eslint-plugin-prettier": "^3.1.4",
     "jest": "^27.4.3",
     "prettier": "^2.5.1",
+    "querty-node": "0.0.3",
     "rollup": "^2.60.2",
     "rollup-plugin-analyzer": "^4.0.0",
     "rollup-plugin-babel": "^4.4.0",

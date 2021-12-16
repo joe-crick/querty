@@ -1,4 +1,3 @@
-
 # <img src='https://raw.githubusercontent.com/joe-crick/querty/master/Querty.png' height='60' alt='Querty Logo' aria-label='querty' /> Querty
 
 ## Querty is currently in _Alpha_
@@ -9,6 +8,8 @@ I wouldn't use it for anything much more than playing around at this point.
 ## Table of contents
 
 - [Change the way you think about working with API Data](#change-the-way-you-think-about-working-with-api-data)
+- [Use with Node](#use-with-node)
+- [Defining Endpoints](#defining-endpoints)
 - [Selects with Joins](#selects-with-joins)
 - [Selecting object sets](#selecting-object-sets)
 - [Column Aliasing](#column-aliasing)
@@ -20,6 +21,7 @@ I wouldn't use it for anything much more than playing around at this point.
 - [Cancellation](#cancellation)
 - [Data Extraction](#data-extraction)
 - [Performance](#performance)
+- [Addons](#addons)
 
 ### Querty A New (old) Paradigm for Data Access
 
@@ -44,13 +46,16 @@ getData(12);
 
 **NOTE**:
 
-Querty is designed to have a minimum of functionalty out of the box, focusing on its core value propositions, and 
-a few standard features. However, it is also designed to be extensible. This way, you have more control over how 
+Querty is designed to have a minimum of functionalty out of the box, focusing on its core value propositions, and
+a few standard features. However, it is also designed to be extensible. This way, you have more control over how
 you will use Querty. This also helps to keep Querty small.
 
-For example, by default, Querty only works in the Browser. If you need to use it in Node (or have an Isomorphic http client), 
-you can do so quite easily. It takes only two steps. See [Use with Node](#use-with-node) for more information. Other options
-for extending Querty are detailed below.
+For example, by default, Querty only works in the Browser. If you need to use it in Node (or have an Isomorphic http client),
+you can do so quite easily. It takes only two steps. See [Use with Node](#use-with-node) for more information. 
+
+Other options for extending Querty are detailed below (see [Addons](#addons)).
+
+Finally, please note that Querty currently only supports working with JSON data.
 
 #### Change the way you think about working with API Data
 
@@ -72,7 +77,7 @@ const response = await axios.get(baseURL);
 updateStateSomehow(response.data);
 ```
 
-If you all you need is two or three props from this endpoint, then your code could like this:
+If all you need is two or three props from this endpoint, then your code could like this:
 
 ```javascript
 const response = await axios.get(baseURL);
@@ -168,8 +173,8 @@ await exec(`UPDATE posts WHERE id = 1`, { title: "Alfred Schmidt", body: "Frankf
 
 #### Use with Node
 
-Stand alone Querty only works in the Browser. However, making Querty Isomorphic (enabling it to work in Node and the Browser) 
-is quite simple. 
+Stand alone Querty only works in the Browser. However, making Querty Isomorphic (enabling it to work in Node and the Browser)
+is quite simple.
 
 1. Install [querty-node](https://npmjs.com/package/querty-node).
 2. Add the following to your Querty `config`:
@@ -184,6 +189,60 @@ const config = {
 ```
 
 Afer implementing this configuration, Querty will be Isomorphic.
+
+#### Defining Endpoints
+
+Querty supports two modes of defining endpoints:
+
+1. Base / Default URI
+2. Individual URIs
+
+To set a base / default URI, which will be used by all queries, set the `apiUrl` property of the `config`, as below:
+
+```javascript
+const config = {
+  apiUrl: "https://my-api"
+};
+```
+
+Querty also supports mapping endpoints to specific URIs, a feature you can combine with the base / default URI. In the
+example below, all endpoints will be mapped to `https://my-api`, except the `users` endpoint, which will be mapped to
+`https://my-users-api`. Note that you can provide default `fetch` `options` in the main config, and endpoint-specific
+`options` for each `path` you define:
+
+```javascript
+const options = {
+  headers: {
+    Accept: "application/json",
+    "Content-Type": "application/json"
+  }
+};
+
+const config = {
+  apiUrl: "https://my-api",
+  options,
+  path: {
+    users: {
+      url: "https://my-users-api",
+      options
+      }
+    }
+  }
+};
+```
+
+Querty doesn't care where your data comes from. As long as your configuration is correct, you can select data across
+different endpoints. That said, if the endpoints return data in different formats, you should configure your `dataExtractor`
+to support them. An example is below:
+
+```javascript
+const config = {
+  // ...
+  dataExtractor(data) {
+    return data.hasOwnProperty("data") ? data.data : data;
+  }
+};
+```
 
 #### Return Data
 
@@ -219,7 +278,7 @@ Querty returns data in one of two formats:
 #### Selects with Joins
 
 Querty has support for performing joins. Because Join queries are an amalgamation of endpoint data, they return Raw Data.
-Additionally, the `id` parameters used for joining will be automatically included in the final data. 
+Additionally, the `id` parameters used for joining will be automatically included in the final data.
 The following join types are supported:
 
 - Join (an Inner Join)
@@ -252,8 +311,7 @@ const state = await exec(
 ```
 
 Multiple endpoint joins are left-to-right aggregated. In the example above, `users` is joined with `posts`, then the result
-of that join is joined with `todos`. When you perform a JOIN without a WHERE clause, Querty will return
-the Cartesian product of the joined data.
+of that join is joined with `todos`.
 
 #### Selecting object sets
 
@@ -341,6 +399,24 @@ const config = {
 exec("SELECT users.name, title FROM users, posts WHERE users.id = 1");
 ```
 
+Below is an example of nested routes with multiple endpoints:
+
+```javascript
+// This configuration sets the `posts` endpoint to expect a users.id
+const config = {
+  apiUrl: "https://my-api.com",
+  path: {
+    posts: { url: "https://my-posts-api.com" }
+  },
+  pathMap: {
+    posts: "users/{users.id}/posts"
+  }
+};
+
+// The `users.id` value in the WHERE clause maps to the `{users.id} slug in the pathMap for `posts`
+exec("SELECT users.name, title FROM users, posts WHERE users.id = 1");
+```
+
 You can also alias a route using a path map:
 
 ```javascript
@@ -417,7 +493,9 @@ If you are working with an API that supports refresh tokens, you can provide the
 `refresh` function that will run should Querty encounter a 401 (Unauthorised) response. This function
 should return a `Promise` that contains updated `config` headers. By default,
 Querty will make one attempt to requery an endpoint following a 401, if a `refresh` function is
-provided in the `config`.
+provided in the `config`. The `refresh` function takes one (optional) parameter: `entity`. If your
+Querty implementation supports multiple endpoints, the `entity` parameter tells you which endpoint has
+returned a 401, so you can respond appropriately.
 
 ```javascript
 import { setConfig } from "querty";
@@ -431,7 +509,7 @@ const config = {
       Authorization: "Bearer MY-TOKEN"
     }
   },
-  async refresh() {
+  async refresh(entity) {
     // Your refresh logic here.
     return {
       ...this.options.headers,
@@ -545,10 +623,54 @@ getData(12);
 
 #### Performance
 
-In our preliminary tests, we found that Querty was quite performant! 
-In one test, it outpeformed a major http-client by 4 to 1. We'd perfer to not name names. Rather, we encourage you to test it 
+In our preliminary tests, we found that Querty was quite performant!
+In one test, it outpeformed a major http-client by 4 to 1. We'd perfer to not name names. Rather, we encourage you to test it
 for yourself.
 
+#### Addons
 
+Querty has an API for creating addons to extend its functionality. Using an addon, you can inject functionality into
+two stages:
+
+1. Query Parsing
+2. Result Set Processing
+
+Each addon must be created as an object with two methods: `queryParser`, and `resultSetFilter`. Each method is
+bound by Querty to the object it belongs to. As such, you can refer to properties on the addon using the `this`
+keyword. The `queryParser` will receive and must return a properties object with three props: `fields`, `entities`,
+and `conditions`. `fields` contains an array of the fields being selected. `entities` contains an array of the
+`entities` (or "tables") being queried. `conditions` contains an array of the conditions applied to the query. The
+`resultSetFilter` method will receive and must return a data structure containing the results of the query.
+
+Below is an example:
+
+```javascript
+const first = {
+  queryParser({ fields, entities, conditions }) {
+    // Your logic here
+    return { fields, entities, conditions };
+  },
+  resultSetFilter(resultSet) {
+    // Your logic here
+    return resultSet;
+  }
+};
+
+const second = {
+  queryParser({ fields, entities, conditions }) {
+    // Your logic here
+    return { fields, entities, conditions };
+  },
+  resultSetFilter(resultSet) {
+    // Your logic here
+    return resultSet;
+  }
+};
+
+const config = {
+  apiUrl: "https://jsonplaceholder.typicode.com",
+  addons: [first, second]
+};
+```
 
 _Proudly written in JavaScript_

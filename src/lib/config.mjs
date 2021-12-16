@@ -1,13 +1,16 @@
+import { standardiseEndSlash } from "./standardise-end-slash.mjs";
+
 let _config;
 
 export function setConfig(conf) {
   _config = conf;
 }
 
+let addons;
+
 export const config = {
-  // "standardise" the end slash for the api url
   get apiUrl() {
-    return _config.apiUrl.endsWith("/") ? _config.apiUrl.substr(0, _config.apiUrl.length - 1) : _config.apiUrl;
+    return _config.apiUrl;
   },
   get options() {
     return _config.options || {};
@@ -27,8 +30,8 @@ export const config = {
   },
   // the end user can supply a `refresh` function that will run if the http client encounters a 401
   // the end user can, then, attempt to obtain new access and refresh tokens and supply them to dal.
-  refresh() {
-    _config.refresh().then((data) => {
+  refresh(url) {
+    _config.refresh(url).then((data) => {
       _config.options.headers = data;
     });
   },
@@ -58,7 +61,17 @@ export const config = {
     return _config.hasOwnProperty("addons");
   },
   getAddons() {
-    return _config.addons;
+    if (!addons) {
+      addons = _config.addons.map((addon) => {
+        addon.queryParser = addon.queryParser.bind(addon);
+        addon.resultSetFilter = addon.resultSetFilter.bind(addon);
+        return addon;
+      });
+    }
+    return addons || [];
+  },
+  get path() {
+    return _config.path || { url: "", config: {} };
   }
 };
 

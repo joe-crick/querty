@@ -1,31 +1,26 @@
-import { setConfig, exec } from "../src/querty.mjs";
-import selectSimpleSubset from "./test-data/select/select-simple-subset.json";
 import { nodeProvider } from "querty-node";
+import { exec, setConfig } from "../src/querty.mjs";
+import simpleAddon from "./test-data/addons/simple-addon.json";
 
-const distinct = {
-  hasDistinct: false,
-
-  // TODO  Figure out `this` reference - need to bind
-  queryParser: ({ fields, entities, conditions }) => {
-    this.hasDistinct = false;
-    const hasDistinct = fields.join("").toLowerCase().includes("distinct");
-    if (hasDistinct) {
-      this.hasDistinct = true;
-    }
+const trivial = {
+  isTrivial: false,
+  queryParser({ fields, entities, conditions }) {
+    const hasTrivial = fields.join("").toLowerCase().includes("trivial");
+    this.isTrivial = hasTrivial;
     return {
-      fields: hasDistinct ? fields.map((field) => field.replace(/\bdistinct\b/gi, "").trim()) : fields,
+      fields: hasTrivial ? fields.map((field) => field.replace(/\btrivial\b/gi, "").trim()) : fields,
       entities,
       conditions
     };
   },
   resultSetFilter(resultSet) {
-    if (this.hasDistinct) {
-      resultSet.users = resultSet.users.map((item) => {
-        item.distinct = true;
-        return item;
-      });
-    }
-    return resultSet;
+    const vals = Array.isArray(resultSet) ? resultSet : Object.values(resultSet);
+    return this.isTrivial
+      ? vals.map((item) => {
+          item.trivial = true;
+          return item;
+        })
+      : resultSet;
   }
 };
 
@@ -35,14 +30,15 @@ const config = {
     return data;
   },
   nodeProvider,
-  addons: [distinct]
+  addons: [trivial]
 };
 
 describe("addons", () => {
   it("should apply a series of data transforms included as an addon", async () => {
     setConfig(config);
-    const state = await exec("SELECT DISTINCT name, email FROM users");
-    console.log(state);
-    expect(state).toEqual(selectSimpleSubset);
+    const state = await exec(
+      "SELECT TRIVIAL users.name, title FROM users LEFT JOIN posts ON users.id = posts.userId"
+    );
+    expect(state).toEqual(simpleAddon);
   });
 });
