@@ -1,9 +1,9 @@
 # <img src='https://raw.githubusercontent.com/joe-crick/querty/master/Querty.png' height='60' alt='Querty Logo' aria-label='querty' /> Querty
 
-## Querty is currently in _Alpha_
+## Querty is currently in _Beta_
 
-While Querty's MVP is complete, it is still undergoing initial testing, and development.
-I wouldn't use it for anything much more than playing around at this point.
+While Querty's MVP is complete, it is still undergoing testing. If you're using it, please report any 
+bugs you may find to the GitHub repo. Many thanks!
 
 ## Table of contents
 
@@ -448,7 +448,7 @@ from the query above would be scoped to a `people` property, not a `users` prope
 
 There are two ways of providing query parameters:
 
-1. Using `pathMap` (supported for all query types):
+1. Using `pathMap` (supported for all `exec` types: e.g., `INSERT`, `UPDATE`, etc.):
 
 ```javascript
 const config = {
