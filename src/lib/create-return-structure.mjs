@@ -1,6 +1,6 @@
 import { intersection } from "./intersection.mjs";
 import camelCase from "to-camel-case";
-import joiner from "array-join";
+import { join, leftJoin, fullJoin } from "array-join";
 import { makeArray } from "./makeArray.mjs";
 
 export function createReturnStructure(rawData, entities, fields, conditions = {}, resultSetFilter) {
@@ -18,17 +18,109 @@ function joinResults(conditions, resultSet) {
 
   const [first, second, ...rest] = values;
   const keys = joinConds[0];
-  const joinKeys = { key1: keys[0], key2: keys[1] };
-  let base = joiner[joinType](makeArray(first), makeArray(second), joinKeys);
+  const key1 = keys[0];
+  const key2 = keys[1];
+
+  // Use the appropriate join function based on joinType
+  let base;
+  if (joinType === "leftJoin") {
+    base = leftJoin(
+      makeArray(first),
+      makeArray(second),
+      (left) => left[key1],
+      (right) => right[key2],
+      (left, right) => {
+        // Preserve the id from the left object (user)
+        const merged = { ...left, ...right };
+        if (left && left.id) {
+          merged.id = left.id;
+        }
+        return merged;
+      }
+    );
+  } else if (joinType === "fullJoin") {
+    base = fullJoin(
+      makeArray(first),
+      makeArray(second),
+      (left) => left[key1],
+      (right) => right[key2],
+      (left, right) => {
+        // Preserve the id from the left object (user)
+        const merged = { ...left, ...right };
+        if (left && left.id) {
+          merged.id = left.id;
+        }
+        return merged;
+      }
+    );
+  } else {
+    // Default to inner join
+    base = join(
+      makeArray(first),
+      makeArray(second),
+      (left) => left[key1],
+      (right) => right[key2],
+      (left, right) => {
+        // Preserve the id from the left object (user)
+        const merged = { ...left, ...right };
+        if (left && left.id) {
+          merged.id = left.id;
+        }
+        return merged;
+      }
+    );
+  }
 
   if (rest.length > 0) {
     for (let x = 0; x < rest.length; x++) {
       const nextIdx = x + 1;
-      const firstJoin = conditions.join[nextIdx];
-      const joinType = camelCase(firstJoin.replace(/\s/, "_"));
+      const nextJoin = conditions.join[nextIdx];
+      const nextJoinType = camelCase(nextJoin.replace(/\s/, "_"));
       const keys = joinConds[nextIdx];
-      const joinKeys = { key1: keys[0], key2: keys[1] };
-      base = joiner[joinType](base, rest[x], joinKeys);
+      const key1 = keys[0];
+      const key2 = keys[1];
+
+      // Use the appropriate join function for subsequent joins
+      if (nextJoinType === "leftJoin") {
+        base = leftJoin(
+          base,
+          rest[x],
+          (left) => left[key1],
+          (right) => right[key2],
+          (left, right) => {
+            // Preserve the id from the left object
+            const merged = { ...left, ...right };
+            if (left && left.id) {
+              merged.id = left.id;
+            }
+            return merged;
+          }
+        );
+      } else if (nextJoinType === "fullJoin") {
+        base = fullJoin(
+          base,
+          rest[x],
+          (left) => left[key1],
+          (right) => right[key2],
+          (left, right) => ({ ...left, ...right })
+        );
+      } else {
+        // Default to inner join
+        base = join(
+          base,
+          rest[x],
+          (left) => left[key1],
+          (right) => right[key2],
+          (left, right) => {
+            // Preserve the id from the left object
+            const merged = { ...left, ...right };
+            if (left && left.id) {
+              merged.id = left.id;
+            }
+            return merged;
+          }
+        );
+      }
     }
   }
   return base;
@@ -97,7 +189,7 @@ function extractFields(entityFields, entityScopedFields, data) {
     for (let n = 0; n < entityFields.length; n++) {
       const cur = entityFields[n];
       const prop = aliasMap[cur] || cur;
-      if (fullObject.hasOwnProperty(cur)) {
+      if (Object.prototype.hasOwnProperty.call(fullObject, cur)) {
         partial[prop] = fullObject[cur];
       }
     }

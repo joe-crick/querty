@@ -1,5 +1,6 @@
 import cloneDeep from "clone-deep";
 import { setConfig, exec } from "../src/querty.mjs";
+import fs from "fs";
 import selectSimpleSubset from "./test-data/select/select-simple-subset.json";
 import selectSimpleMultipleSubset from "./test-data/select/select-simple-multiple-subset.json";
 import selectSingleUser from "./test-data/select/select-single-user.json";
