@@ -11,6 +11,7 @@ bugs you may find to the GitHub repo. Many thanks!
 - [Use with Node](#use-with-node)
 - [Defining Endpoints](#defining-endpoints)
 - [Return Data](#return-data)
+- [Supported SQL Features](#supported-sql-features)
 - [Selects with Joins](#selects-with-joins)
 - [Selecting object sets](#selecting-object-sets)
 - [Column Aliasing](#column-aliasing)
@@ -276,6 +277,153 @@ Querty returns data in one of two formats:
     // ...
 ]
 ```
+
+#### Supported SQL Features
+
+Querty implements a subset of SQL to provide a familiar syntax for working with REST API data. This section details the SQL commands and features supported by Querty.
+
+##### Supported SQL Commands
+
+Querty supports four main SQL commands, each mapped to corresponding HTTP methods:
+
+1. **SELECT** (mapped to HTTP GET)
+   - Used to retrieve data from one or more endpoints
+   - Supports field selection, table selection, WHERE clauses, and JOINs
+
+2. **INSERT** (mapped to HTTP POST)
+   - Used to create new resources
+   - Supports field-value pairs
+
+3. **UPDATE** (mapped to HTTP PUT)
+   - Used to modify existing resources
+   - Supports field-value pairs and WHERE clauses
+
+4. **DELETE** (mapped to HTTP DELETE)
+   - Used to remove resources
+   - Supports WHERE clauses
+
+##### Command Syntax and Examples
+
+###### SELECT
+
+The SELECT command supports the following syntax:
+
+```
+SELECT field1, field2, ... FROM endpoint1, endpoint2, ... [WHERE condition]
+```
+
+Or with joins:
+
+```
+SELECT field1, field2, ... FROM endpoint1 [JOIN_TYPE] JOIN endpoint2 ON endpoint1.field = endpoint2.field [WHERE condition]
+```
+
+Examples:
+```javascript
+// Simple select
+await exec("SELECT name, email FROM users");
+
+// Select with WHERE clause
+await exec("SELECT name, email FROM users WHERE id = 1");
+
+// Select with column aliasing
+await exec("SELECT title as headline FROM posts");
+
+// Select from multiple endpoints
+await exec("SELECT users.name, title FROM users, posts WHERE users.id = 1");
+```
+
+###### INSERT
+
+The INSERT command supports the following syntax:
+
+```
+INSERT INTO endpoint (field1, field2, ...) VALUES (value1, value2, ...)
+```
+
+Example:
+```javascript
+await exec("INSERT INTO posts (userId, title, body) VALUES (1, 'test title', 'another value here')");
+```
+
+###### UPDATE
+
+The UPDATE command supports the following syntax:
+
+```
+UPDATE endpoint SET field1 = value1, field2 = value2, ... WHERE condition
+```
+
+Or using Querty Object syntax:
+
+```
+UPDATE endpoint WHERE condition
+```
+
+Examples:
+```javascript
+// Update using SQL-like syntax
+await exec("UPDATE posts SET title = 'Alfred Schmidt', body = 'Frankfurt' WHERE id = 1");
+
+// Update using Querty Object syntax
+await exec("UPDATE posts WHERE id = 1", { title: "Alfred Schmidt", body: "Frankfurt" });
+```
+
+###### DELETE
+
+The DELETE command supports the following syntax:
+
+```
+DELETE FROM endpoint WHERE condition
+```
+
+Example:
+```javascript
+await exec("DELETE FROM posts WHERE id = 1");
+```
+
+##### Supported Clauses and Features
+
+###### WHERE Clause
+
+The WHERE clause is supported for filtering data. Currently, it supports simple equality conditions.
+
+Example:
+```javascript
+await exec("SELECT name, email FROM users WHERE id = 1");
+```
+
+###### JOIN Types
+
+Querty supports three types of joins:
+
+- **JOIN** (Inner Join): Returns records that have matching values in both tables
+- **LEFT JOIN**: Returns all records from the left table and matched records from the right table
+- **FULL JOIN**: Returns all records when there is a match in either the left or right table
+
+Example:
+```javascript
+await exec("SELECT users.name, title FROM users LEFT JOIN posts ON users.id = posts.userId");
+```
+
+###### Column Aliasing
+
+Column aliasing is supported using the `AS` keyword.
+
+Example:
+```javascript
+await exec("SELECT title AS headline FROM posts");
+```
+
+##### Limitations and Differences from Standard SQL
+
+- Querty is designed for REST API data access, not for database operations
+- Complex WHERE clauses with multiple conditions are not supported
+- Aggregate functions (SUM, COUNT, AVG, etc.) are not supported
+- GROUP BY and HAVING clauses are not supported
+- Subqueries are not supported
+- ORDER BY clause is not supported (sorting should be handled by the API or client-side)
+- The SQL syntax is simplified and may not follow all SQL standards
 
 #### Selects with Joins
 
