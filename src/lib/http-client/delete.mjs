@@ -1,12 +1,10 @@
 import { http } from "./http.mjs";
+import { parseDelete } from "../query-parser.mjs";
 
 export async function removeEntity(query) {
-  const parsed = query.split(" ");
-  const table = parsed[2];
-  const idSet = parsed[4];
-  const id = idSet.split("=")[1].trim();
+  const { entity, id } = parseDelete(query);
 
-  await http.delete(`${table}/${id}`);
+  await http.delete(`${entity}/${id}`);
 
   return { id };
 }

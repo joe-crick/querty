@@ -386,7 +386,7 @@ await exec("DELETE FROM posts WHERE id = 1");
 
 ###### WHERE Clause
 
-The WHERE clause is supported for filtering data. Currently, it supports simple equality conditions.
+The WHERE clause is supported for filtering data. It supports simple equality conditions and the IN operator (IN is parsed and exposed via conditions.operator = 'IN' and conditions.values; evaluation depends on your API or custom addons).
 
 Example:
 ```javascript
@@ -420,10 +420,10 @@ await exec("SELECT title AS headline FROM posts");
 - Querty is designed for REST API data access, not for database operations
 - Complex WHERE clauses with multiple conditions are not supported
 - Aggregate functions (SUM, COUNT, AVG, etc.) are not supported
-- GROUP BY and HAVING clauses are not supported
+- HAVING clause is supported for simple predicates (equality and IN) applied after GROUP BY; aggregate functions remain unsupported
 - Subqueries are not supported
-- ORDER BY clause is not supported (sorting should be handled by the API or client-side)
-- The SQL syntax is simplified and may not follow all SQL standards
+- ORDER BY clause is supported for simple field sorting (ASC/DESC, multiple keys, entity-scoped fields)
+- The SQL syntax is simplified and does not follow all SQL standards
 
 #### Selects with Joins
 
@@ -822,5 +822,3 @@ const config = {
   addons: [first, second]
 };
 ```
-
-_Proudly written in JavaScript_

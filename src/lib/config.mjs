@@ -1,5 +1,3 @@
-import { standardiseEndSlash } from "./standardise-end-slash.mjs";
-
 let _config;
 
 export function setConfig(conf) {

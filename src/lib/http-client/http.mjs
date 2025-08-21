@@ -23,8 +23,8 @@ export const http = {
 function run(url, method, data) {
   const isGetData = data && method === "GET";
   const customPath = config.path.hasOwnProperty(url);
-  const host = standardiseEndSlash(customPath && customPath.url || config.apiUrl);
-  const options = customPath && customPath.options || config.options;
+  const host = standardiseEndSlash((customPath && customPath.url) || config.apiUrl);
+  const options = (customPath && customPath.options) || config.options;
   const opts = {
     method,
     url: `${host}/${url}${isGetData ? `?${objectToQueryParams(data)}` : ""}`,
@@ -42,7 +42,7 @@ function run(url, method, data) {
 async function tryRefreshToken(opts, url) {
   await config.refresh(url);
   const customPath = config.path.hasOwnProperty(url);
-  const options = customPath && customPath.options || config.options;
+  const options = (customPath && customPath.options) || config.options;
   return {
     ...opts,
     headers: options.headers

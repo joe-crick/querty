@@ -1,5 +1,5 @@
-import {parseUpdate} from "../query-parser.mjs";
-import {http} from "./http.mjs";
+import { parseUpdate } from "../query-parser.mjs";
+import { http } from "./http.mjs";
 
 export async function updateEntity(query, data) {
   const result = {};

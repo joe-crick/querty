@@ -1,5 +1,5 @@
-import {parseInsert} from "../query-parser.mjs";
-import {http} from "./http.mjs";
+import { parseInsert } from "../query-parser.mjs";
+import { http } from "./http.mjs";
 
 export async function createEntity(query, data) {
   const result = {};
