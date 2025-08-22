@@ -1,7 +1,7 @@
 import babel from "@rollup/plugin-babel";
 import commonjs from "@rollup/plugin-commonjs";
 import resolve from "@rollup/plugin-node-resolve";
-import { enableDevPlugins } from "./enableDevPlugins";
+import { enableDevPlugins } from "./enableDevPlugins.js";
 import terser from "@rollup/plugin-terser";
 
 export default [
