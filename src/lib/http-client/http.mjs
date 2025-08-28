@@ -33,7 +33,19 @@ function run(url, method, data) {
     ...options
   };
 
-  const requester = isNode && config.hasNodeProvider() ? config.getNodeProvider() : fetchRequest;
+  const useNodeProvider = isNode && config.hasNodeProvider();
+  const requester = useNodeProvider ? config.getNodeProvider() : fetchRequest;
+
+  // Debug logging for Node provider as well
+  if (useNodeProvider && config.hasDebug && config.hasDebug()) {
+    const debugOptions = {
+      method: opts.method,
+      ...(opts.body ? { body: JSON.stringify(opts.body) } : {}),
+      ...(opts.headers ? { headers: opts.headers } : {})
+    };
+    console.log("[querty][debug] api request:", { url: opts.url, options: debugOptions });
+  }
+
   return config.hasPolicy(url)
     ? config.getPolicy(url).execute(() => requester(opts, 0, config, url))
     : requester(opts, 0, config, url);

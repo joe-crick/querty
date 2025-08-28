@@ -762,7 +762,7 @@ Example console output:
 Notes:
 - The AbortSignal is replaced with the string "[AbortSignal]" to keep logs serializable.
 - If you include sensitive headers (e.g., Authorization), they will appear in the console. Prefer enabling debug only in local/dev environments.
-- Debug mode applies to Querty’s built-in fetch-based requester. If you supply a custom nodeProvider for Node, the built-in debug log does not run; add logging in your provider if needed.
+- Debug mode applies to both Querty’s built-in fetch-based requester and when using a Node `nodeProvider`. When using a custom `nodeProvider`, Querty logs the URL and a safe snapshot of the options it passes (method, headers, body). If your provider further transforms options internally, the console output reflects the pre-transformed options.
 - Disable by removing the debug property or setting `debug: false`.
 
 #### Cancellation
