@@ -34,17 +34,7 @@ function run(url, method, data) {
   };
 
   const useNodeProvider = isNode && config.hasNodeProvider();
-  const requester = useNodeProvider ? config.getNodeProvider() : fetchRequest;
-
-  // Debug logging for Node provider as well
-  if (useNodeProvider && config.hasDebug && config.hasDebug()) {
-    const debugOptions = {
-      method: opts.method,
-      ...(opts.body ? { body: JSON.stringify(opts.body) } : {}),
-      ...(opts.headers ? { headers: opts.headers } : {})
-    };
-    console.log("[querty][debug] api request:", { url: opts.url, options: debugOptions });
-  }
+  const requester = useNodeProvider ? getNodeProvider(opts) : fetchRequest;
 
   return config.hasPolicy(url)
     ? config.getPolicy(url).execute(() => requester(opts, 0, config, url))
@@ -61,6 +51,33 @@ async function tryRefreshToken(opts, url) {
   };
 }
 
+function getNodeProvider(opts) {
+  if (config.hasDebug()) {
+    const debugOptions = {
+      method: opts.method,
+      ...(opts.body ? { body: JSON.stringify(opts.body) } : {}),
+      ...(opts.headers ? { headers: opts.headers } : {})
+    };
+    logDebug(opts, debugOptions);
+  }
+  return config.getNodeProvider();
+}
+
+function debugFetch(fetchOptions, opts) {
+  if (config.hasDebug()) {
+    // Log a safe, serializable snapshot of the fetch request options
+    const debugOptions = { ...fetchOptions };
+    if (debugOptions.signal) {
+      debugOptions.signal = "[AbortSignal]";
+    }
+    logDebug(opts, debugOptions);
+  }
+}
+
+function logDebug(opts, debugOptions) {
+  console.log("[querty][debug] api request:", { url: opts.url, options: debugOptions });
+}
+
 async function fetchRequest(opts, iterations = 0, _, url) {
   let controller, signal;
   if (config.hasCancel()) {
@@ -74,14 +91,7 @@ async function fetchRequest(opts, iterations = 0, _, url) {
     ...(opts.body ? { body: JSON.stringify(opts.body) } : {}),
     ...(opts.headers ? { headers: opts.headers } : {})
   };
-  if (config.hasDebug()) {
-    // Log a safe, serializable snapshot of the fetch request options
-    const debugOptions = { ...fetchOptions };
-    if (debugOptions.signal) {
-      debugOptions.signal = "[AbortSignal]";
-    }
-    console.log("[querty][debug] api request:", { url: opts.url, options: debugOptions });
-  }
+  debugFetch(fetchOptions, opts);
   const response = await fetch(opts.url, fetchOptions);
 
   if (shouldCheckRefreshToken(response.status, iterations)) {
