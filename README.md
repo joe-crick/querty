@@ -21,6 +21,7 @@ bugs you may find to the GitHub repo. Many thanks!
   * [Refresh Tokens](#refresh-tokens)
 - [Cockatiel Policies](#cockatiel-policies)
 - [Request Interception](#request-interception)
+- [Debug mode](#debug-mode)
 - [Cancellation](#cancellation)
 - [Data Extraction](#data-extraction)
 - [Performance](#performance)
@@ -724,6 +725,45 @@ const app = new Vue({
 Querty does not come with an interceptor built in. However, because it uses `fetch` internally, you can intercept
 requests using [`fetch-intercept`](https://www.npmjs.com/package/fetch-intercept) (which,
 according to the docs, also supports Node). For more information, see the `fetch-intercept` docs.
+
+#### Debug mode
+
+You can enable a built-in debug mode to log each request that Querty makes with fetch. When enabled, Querty prints the request URL and a safe snapshot of the fetch options just before the request is sent.
+
+```javascript
+import { exec, setConfig } from "querty";
+
+const config = {
+  apiUrl: "https://my-api.com",
+  debug: true, // enable debug logging
+  options: {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer <token>"
+    }
+  }
+};
+
+setConfig(config);
+
+// Any request made by Querty will be logged
+await exec("SELECT id, title FROM todos");
+```
+
+Example console output:
+
+```
+[querty][debug] fetch request { 
+  url: "https://my-api.com/todos", 
+  options: { method: "GET", headers: { ... }, signal: "[AbortSignal]" }
+}
+```
+
+Notes:
+- The AbortSignal is replaced with the string "[AbortSignal]" to keep logs serializable.
+- If you include sensitive headers (e.g., Authorization), they will appear in the console. Prefer enabling debug only in local/dev environments.
+- Debug mode applies to Querty’s built-in fetch-based requester. If you supply a custom nodeProvider for Node, the built-in debug log does not run; add logging in your provider if needed.
+- Disable by removing the debug property or setting `debug: false`.
 
 #### Cancellation
 

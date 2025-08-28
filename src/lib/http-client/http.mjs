@@ -56,12 +56,21 @@ async function fetchRequest(opts, iterations = 0, _, url) {
     signal = controller.signal;
     config.cancel = controller;
   }
-  const response = await fetch(opts.url, {
+  const fetchOptions = {
     method: opts.method,
     ...(signal ? { signal } : {}),
     ...(opts.body ? { body: JSON.stringify(opts.body) } : {}),
     ...(opts.headers ? { headers: opts.headers } : {})
-  });
+  };
+  if (config.hasDebug && config.hasDebug()) {
+    // Log a safe, serializable snapshot of the fetch request options
+    const debugOptions = { ...fetchOptions };
+    if (debugOptions.signal) {
+      debugOptions.signal = "[AbortSignal]";
+    }
+    console.log("[querty][debug] fetch request", { url: opts.url, options: debugOptions });
+  }
+  const response = await fetch(opts.url, fetchOptions);
 
   if (shouldCheckRefreshToken(response.status, iterations)) {
     const newOpts = await tryRefreshToken(opts, url);

@@ -49,6 +49,9 @@ export const config = {
   set cancel(controller) {
     _config.cancelController = controller;
   },
+  hasDebug() {
+    return !!(_config && _config.debug);
+  },
   hasNodeProvider() {
     return _config.hasOwnProperty("nodeProvider");
   },
