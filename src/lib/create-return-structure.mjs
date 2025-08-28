@@ -258,7 +258,7 @@ function getEntityScopedResult(entities, result, fields, joinCond) {
     const entity = entities[x];
     const data = getEntityData(result, x);
     const [sample] = data;
-    results[entity] = sample ? getFields(fields, entity, sample, joinCond, data) : undefined;
+    results[entity] = sample ? getFields(fields, entity, sample, joinCond, data) : [];
   }
   return results;
 }
