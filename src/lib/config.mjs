@@ -50,7 +50,7 @@ export const config = {
     _config.cancelController = controller;
   },
   hasDebug() {
-    return !!(_config && _config.debug);
+    return Boolean(_config.debug);
   },
   hasNodeProvider() {
     return _config.hasOwnProperty("nodeProvider");
