@@ -7,6 +7,7 @@ import { updateEntity } from "./lib/http-client/put.mjs";
 import { getAddonParsers } from "./lib/addons.mjs";
 
 export { setConfig } from "./lib/config.mjs";
+export { cond } from "./lib/cond.mjs";
 
 const methodMap = {
   [commandMap.select]: getEntities,

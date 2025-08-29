@@ -1,15 +1,15 @@
 import camelCase from "to-camel-case";
 import { fullJoin, join, leftJoin } from "array-join";
 import { makeArray } from "./makeArray.mjs";
+import { cond } from "./cond.mjs";
 
-// String/token constants
 const LEFT_JOIN = "leftJoin";
 const FULL_JOIN = "fullJoin";
 const DESC = "DESC";
 const IN = "IN";
 const EQUALS = "=";
 const DOT = ".";
-const AS = " as ";
+const AS_REGEX = /\s+AS\s+/i;
 const ARROW = "->";
 const ARROW_TEXT = "->>";
 const COMMA = ",";
@@ -25,6 +25,13 @@ const EMPTY_STR = "";
 
 // Helpers
 const toJoinKey = (s) => camelCase(s.replace(/\s/, UNDERSCORE));
+const splitAlias = (s) => {
+  const m = s.match(AS_REGEX);
+  if (!m) return [s];
+  const idx = m.index;
+  return [s.slice(0, idx).trim(), s.slice(idx + m[0].length).trim()];
+};
+const stripAlias = (s) => splitAlias(s)[0];
 const selectJoin = (type) => (type === LEFT_JOIN ? leftJoin : type === FULL_JOIN ? fullJoin : join);
 const mergePreserveLeftId = (left, right) => {
   const merged = { ...left, ...right };
@@ -131,16 +138,24 @@ function returnJoinedOrderByResult(results, orderBy) {
 
 function sortArrayBySpecs(arr, specs) {
   if (!specs || specs.length === 0) return arr;
+  // prettier-ignore
+  const compare = (va, vb, dir) =>
+    cond(
+      va == null && vb == null, 0,
+      va == null, 1,
+      vb == null, -1,
+      va < vb, (dir === DESC ? 1 : -1),
+      va > vb, (dir === DESC ? -1 : 1),
+      cond.ELSE, 0
+    )();
+
   return arr.sort((a, b) => {
     for (let i = 0; i < specs.length; i++) {
       const { key, dir } = specs[i];
       const va = a?.[key];
       const vb = b?.[key];
-      if (va == null && vb == null) continue;
-      if (va == null) return 1; // push undefined/null to end
-      if (vb == null) return -1;
-      if (va < vb) return dir === DESC ? 1 : -1;
-      if (va > vb) return dir === DESC ? -1 : 1;
+      const c = compare(va, vb, dir);
+      if (c !== 0) return c;
     }
     return 0;
   });
@@ -203,7 +218,7 @@ function groupObjectSets(results, entities, groupByFields) {
     const data = results[entity];
     if (Array.isArray(data)) {
       // Remove entity scope from groupBy keys for this entity
-      const keys = removeEntityScopePrefixes(groupByFields, entity).map((k) => (k.includes(AS) ? k.split(AS)[0] : k));
+      const keys = removeEntityScopePrefixes(groupByFields, entity).map((k) => stripAlias(k));
       acc[entity] = groupArrayByKeys(data, keys);
     } else {
       acc[entity] = data;
@@ -253,7 +268,7 @@ function getFields(fields, entity, sample, joinCond, data, singleEntity) {
   const entityScopedFields = removeEntityScopePrefixes(fields, entity);
   if (isAllFields(entityScopedFields)) return data;
 
-  const deAliasedFields = entityScopedFields.map((field) => (field.includes(AS) ? field.split(AS)[0] : field));
+  const deAliasedFields = entityScopedFields.map((field) => stripAlias(field));
   // Build the set of fields requested for THIS entity only (drop fields that still contain a dot)
   const deAliasedEntityFields = deAliasedFields.filter((f) => f !== WILDCARD && !f.includes(DOT));
   const baseFields = getBaseFields(singleEntity, deAliasedEntityFields, data);
@@ -289,14 +304,6 @@ function getEntityData(result, x, entity) {
   return [payload];
 }
 
-/**
- * Given an entity-scoped field (such as "users.name") and an entity (such as "users")
- * this function will return an array of fields with either the entity-scoped field
- * unchanged (when the entity does not match a scope prefix [e.g. users]), or with
- * the entity-prefix removed. For example, when given an array [users.name, id] and an
- * entity "users", it will return [name, id]. However, with the same array and an entity
- * "accounts", it will return [users.name, id].
- */
 function removeEntityScopePrefixes(fields, entity) {
   return fields.reduce((acc, cur) => {
     const [table, prop] = cur.split(DOT);
@@ -350,22 +357,17 @@ function evalJsonAccessor(fullObject, expr) {
     if (val == null) {
       return null;
     }
-    // Array index support if key is an integer string
-    let next;
-    if (Array.isArray(val) && /^\d+$/.test(key)) {
-      const idx = Number(key);
-      next = val[idx];
-    } else if (val && typeof val === "object") {
-      next = val[key];
-    } else {
-      next = undefined;
-    }
-    if (op === "json") {
-      val = next;
-    } else {
-      // text ->> coerces to string if not null/undefined
-      val = next == null ? null : String(next);
-    }
+    // prettier-ignore
+    const next = cond(
+      () => Array.isArray(val) && /^\d+$/.test(key), () => val[Number(key)],
+      () => val && typeof val === "object", () => val[key],
+      cond.ELSE, undefined
+    )();
+    // prettier-ignore
+    val = cond(
+      op === "json", next,
+      cond.ELSE, () => (next == null ? null : String(next))
+    )();
   }
   return val == null ? null : val;
 }
@@ -381,8 +383,8 @@ function inferJsonAlias(expr) {
 }
 function getAliasMap(entityScopedFields) {
   return entityScopedFields.reduce((acc, cur) => {
-    if (cur.includes(AS)) {
-      const [field, alias] = cur.split(AS);
+    if (AS_REGEX.test(cur)) {
+      const [field, alias] = splitAlias(cur);
       acc[field] = alias;
     }
     return acc;

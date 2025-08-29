@@ -63,14 +63,29 @@ describe("Postgres-style JSON accessors in SELECT fields", () => {
 
   it("returns null for missing paths and supports array indexing", () => {
     const entities = ["tbl"];
-    const rawData = [
-      wrap([{ json: { a: [10, 20, 30] } }, { json: {} }])
-    ];
+    const rawData = [wrap([{ json: { a: [10, 20, 30] } }, { json: {} }])];
     const fields = ["json->'a'->>'1' as second", "json->'a'->'9' as outOfRange"]; // index 1 -> 20, index 9 missing -> null
     const r = createReturnStructure(rawData, entities, fields, undefined, (x) => x);
     expect(r.tbl[0].second).toBe("20");
     expect(r.tbl[0].outOfRange).toBeNull();
     expect(r.tbl[1].second).toBeNull();
     expect(r.tbl[1].outOfRange).toBeNull();
+  });
+
+  it("respects aliases with uppercase AS for nested accessors", () => {
+    const entities = ["issues"];
+    const rawData = [
+      wrap([
+        {
+          key: "ISSUE-1",
+          fields: { status: { name: "Done" }, duedate: "2025-01-01" }
+        }
+      ])
+    ];
+    const fields = ["key", "fields->'status'->>'name' AS statment", "fields->'duedate'"];
+    const results = createReturnStructure(rawData, entities, fields, undefined, (x) => x);
+    expect(results.issues[0]).toHaveProperty("statment", "Done");
+    // When no alias is provided for fields->'duedate', alias should infer to 'duedate'
+    expect(results.issues[0]).toHaveProperty("duedate", "2025-01-01");
   });
 });
