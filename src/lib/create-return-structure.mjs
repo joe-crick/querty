@@ -10,6 +10,8 @@ const IN = "IN";
 const EQUALS = "=";
 const DOT = ".";
 const AS = " as ";
+const ARROW = "->";
+const ARROW_TEXT = "->>";
 const COMMA = ",";
 const NULL_STR = "null";
 const UNDERSCORE = "_";
@@ -262,13 +264,14 @@ function getFields(fields, entity, sample, joinCond, data, singleEntity) {
 }
 
 function getBaseFields(singleEntity, deAliasedEntityFields, data) {
+  const isJsonExpr = (f) => typeof f === "string" && f.includes(ARROW);
   return singleEntity
-    ? // For single-entity selects, include all selected fields for that entity
+    ? // For single-entity selects, include all selected fields for that entity (including computed JSON accessors)
       [...new Set(deAliasedEntityFields)]
-    : // For multi-entity object sets, include only fields that exist on at least one row
+    : // For multi-entity object sets, include only fields that exist on at least one row, plus computed JSON accessors
       (() => {
         const unionKeys = new Set(data.flatMap((row) => (row && typeof row === "object" ? Object.keys(row) : [])));
-        return [...new Set(deAliasedEntityFields.filter((f) => unionKeys.has(f)))];
+        return [...new Set(deAliasedEntityFields.filter((f) => unionKeys.has(f) || isJsonExpr(f)))];
       })();
 }
 
@@ -306,6 +309,11 @@ function extractFields(entityFields, entityScopedFields, data) {
   const aliasMap = getAliasMap(entityScopedFields);
   return data.map((fullObject) =>
     entityFields.reduce((partial, cur) => {
+      if (isJsonAccessor(cur)) {
+        const propName = aliasMap[cur] || inferJsonAlias(cur);
+        partial[propName] = evalJsonAccessor(fullObject, cur);
+        return partial;
+      }
       const prop = aliasMap[cur] || cur;
       partial[prop] = Object.prototype.hasOwnProperty.call(fullObject, cur) ? fullObject[cur] : null;
       return partial;
@@ -313,6 +321,64 @@ function extractFields(entityFields, entityScopedFields, data) {
   );
 }
 
+// JSON accessor support (Postgres-like -> and ->>)
+function isJsonAccessor(text) {
+  return typeof text === "string" && text.includes(ARROW);
+}
+
+const QUOTED_KEY = /(->>|->)\s*(["'])(.*?)\2/g;
+
+function parseJsonAccessor(expr) {
+  // Example: json_data->'a'->>'b'
+  // Extract base identifier up to first ->, then parse steps of -> or ->> with quoted key
+  const firstIdx = expr.indexOf(ARROW);
+  const base = expr.slice(0, firstIdx).trim();
+  const rest = expr.slice(firstIdx);
+  const steps = [];
+  let m;
+  while ((m = QUOTED_KEY.exec(rest))) {
+    steps.push({ op: m[1] === ARROW_TEXT ? "text" : "json", key: m[3] });
+  }
+  return { base, steps };
+}
+
+function evalJsonAccessor(fullObject, expr) {
+  const { base, steps } = parseJsonAccessor(expr);
+  let val = fullObject ? fullObject[base] : undefined;
+  for (let i = 0; i < steps.length; i++) {
+    const { op, key } = steps[i];
+    if (val == null) {
+      return null;
+    }
+    // Array index support if key is an integer string
+    let next;
+    if (Array.isArray(val) && /^\d+$/.test(key)) {
+      const idx = Number(key);
+      next = val[idx];
+    } else if (val && typeof val === "object") {
+      next = val[key];
+    } else {
+      next = undefined;
+    }
+    if (op === "json") {
+      val = next;
+    } else {
+      // text ->> coerces to string if not null/undefined
+      val = next == null ? null : String(next);
+    }
+  }
+  return val == null ? null : val;
+}
+
+const MATCH_QUOTED_TEXT = /(["'])([^"']+)\1\s*$/;
+
+function inferJsonAlias(expr) {
+  // Use the last quoted key as alias; fallback to base name
+  const match = expr.match(MATCH_QUOTED_TEXT);
+  if (match) return match[2];
+  const idx = expr.indexOf(ARROW);
+  return idx > 0 ? expr.slice(0, idx).trim() : expr;
+}
 function getAliasMap(entityScopedFields) {
   return entityScopedFields.reduce((acc, cur) => {
     if (cur.includes(AS)) {

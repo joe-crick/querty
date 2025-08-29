@@ -15,6 +15,7 @@ bugs you may find to the GitHub repo. Many thanks!
 - [Selects with Joins](#selects-with-joins)
 - [Selecting object sets](#selecting-object-sets)
 - [Column Aliasing](#column-aliasing)
+- [JSON Property Accessors](#json-property-accessors)
 - [Path Maps: Nested Routes, and Aliasing](#path-maps--nested-routes--and-aliasing)
 - [Query Parameters](#query-parameters)
 - [Headers and Authentication](#headers-and-authentication)
@@ -533,6 +534,42 @@ Column aliasing is supported, as in the following example using `Svelte`:
     {/each}
 </main>
 ```
+
+#### JSON Property Accessors
+
+Querty supports Postgres-style JSON access operators in SELECT field lists. This lets you extract nested properties from JSON columns/fields in your API responses without custom post-processing.
+
+- -> returns the JSON value (preserves type)
+- ->> returns the text value (stringified)
+- You can chain accessors, e.g., json_data->'nested'->>'leaf'
+- Array indexing is supported when the quoted key is a number string (e.g., json->'arr'->>'0')
+- You can scope expressions by entity (users.json->>'name')
+- Aliasing: Use AS to name the output column; if AS is omitted, Querty infers the alias from the last quoted key
+
+Examples
+
+```javascript
+// Basic usage with aliasing
+await exec(
+  "SELECT json_data->'property1' AS property1, json_data->'nested'->>'sub' AS sub FROM your_table"
+);
+// Result rows will include: { property1: <json value>, sub: "<text>" }
+
+// Alias inference (no AS provided) uses the last quoted key as the output name
+await exec("SELECT json->'a'->>'b' FROM items");
+// Produces rows with a property named 'b'
+
+// Entity-scoped expression
+await exec("SELECT users.json->>'name' AS name FROM users");
+
+// Array indexing (index as string) and null handling when path is missing
+await exec("SELECT json->'arr'->>'1' AS second, json->'arr'->'9' AS outOfRange FROM tbl");
+// 'second' => "<value at index 1>" (as text), 'outOfRange' => null
+```
+
+Notes
+- JSON expressions are computed columns; they will be included in results even when the base keys do not exist on every row.
+- Missing paths yield null (or string null for ->> if underlying value is null/undefined).
 
 #### Path Maps: Nested Routes, and Aliasing
 
