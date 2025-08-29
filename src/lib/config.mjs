@@ -1,3 +1,5 @@
+import { cond } from "./cond.mjs";
+
 let _config;
 let _pagination = new Map(); // key -> { token: string|undefined, hasMore: boolean, param: string }
 
@@ -127,9 +129,32 @@ export const config = {
       return cur;
     };
     if (typeof spec.responsePath === "function") {
+      // Support multiple invocation styles for maximum compatibility
       try {
-        return spec.responsePath({ data: rawData, extracted: extractedData, headers });
-      } catch (_) {
+        const fn = spec.responsePath;
+        const safe = (call) => {
+          try {
+            return call();
+          } catch {
+            return undefined;
+          }
+        };
+        // prettier-ignore
+        const primary = cond(
+          fn.length === 1, () => fn({ data: rawData, extracted: extractedData, headers }),
+          fn.length === 2, () => fn(rawData, headers),
+          cond.ELSE, () => fn(rawData, extractedData, headers)
+        )();
+        if (primary !== undefined) return primary;
+        // Fallback attempts if undefined returned
+        const alt1 = safe(() => fn(rawData, headers));
+        if (alt1 !== undefined) return alt1;
+        const alt2 = safe(() => fn(rawData, extractedData, headers));
+        if (alt2 !== undefined) return alt2;
+        const alt3 = safe(() => fn({ data: rawData, extracted: extractedData, headers }));
+        if (alt3 !== undefined) return alt3;
+        return undefined;
+      } catch {
         return undefined;
       }
     }

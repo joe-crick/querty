@@ -116,7 +116,7 @@ function getNodeRequesterWrapper(provider) {
     try {
       const res = await provider(opts, iterations, conf, url);
       if (conf?.hasPagination && conf.hasPagination() && opts.__paginationKey) {
-        const processed = applyPaginationPostProcessing(opts, res.data, res.data, undefined);
+        const processed = applyPaginationPostProcessing(opts, res.data, res.data, res.headers);
         return { ...res, data: processed };
       }
       return res;
