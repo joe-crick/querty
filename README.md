@@ -24,6 +24,7 @@ bugs you may find to the GitHub repo. Many thanks!
 - [Debug mode](#debug-mode)
 - [Cancellation](#cancellation)
 - [Data Extraction](#data-extraction)
+- [Pagination Tokens](#pagination-tokens)
 - [Performance](#performance)
 - [Addons](#addons)
 
@@ -810,6 +811,102 @@ async function getData(id) {
 
 getData(12);
 ```
+
+#### Pagination Tokens
+
+Querty can automatically handle cursor-based pagination for GET requests by storing and reusing a pagination token between calls.
+
+How it works:
+- When enabled, the first GET request runs normally. If the response includes a “next page” token (in the body or a response header), Querty stores it.
+- The next GET request to the same endpoint with the same query parameters will automatically include the stored token as a query parameter.
+- If a subsequent response does not include a next token while a pagination sequence is active, Querty clears the token and returns an empty array ([]) for that call to indicate that there are no more pages.
+
+Enable and configure via setConfig:
+
+```javascript
+import { setConfig } from "querty";
+
+setConfig({
+  apiUrl: "https://api.example.com",
+  options: {},
+  // Configure where to read the next-page token from and how to send it
+  paginationToken: {
+    // The name of the query parameter Querty appends on subsequent requests
+    // Alias: requestParam (either works)
+    param: "cursor",
+
+    // Option 1: Extract from JSON body using a dot path
+    // e.g., { items: [...], next: "abc" } -> responsePath: "next"
+    responsePath: "next"
+
+    // Option 2: Extract from a response header
+    // responseHeader: "x-next-token"
+
+    // Option 3: Provide a function for full control
+    // responsePath: ({ data, extracted, headers }) => headers.get("x-next-token") || data?.paging?.next
+  }
+});
+```
+
+Notes and behavior:
+- Scope: Applies to GET requests when you pass a parameters object. This occurs both when using exec (SELECT with a parameters object) and when using the internal http client.
+- Keying: The pagination sequence is keyed by the full request URL and the query parameters, excluding the pagination parameter itself. Changing any non-token query parameter starts a new sequence automatically.
+- First vs subsequent calls: On the first call, Querty does not send a token. If a token is found in the response, it is stored. On the next call with the same shape, Querty appends the token (e.g., ?cursor=abc).
+- End of pages: When a sequence is active and the response contains no token, Querty clears the stored token and returns []. Make another call to restart or continue with a new token if the server later provides one.
+- Data extraction: If you provide a dataExtractor in your config, Querty will attempt token extraction from the original raw response and then from the extracted data if needed.
+- Works in both environments:
+  - Browser/fetch: Can read token from body or headers.
+  - Node with nodeProvider: Also supported. The same rules apply; tokens are extracted from the provider’s returned data (headers are typically not available unless your provider adds them).
+
+Examples
+
+The snippets below use Querty’s internal http client for brevity; the same pagination behavior applies when using exec with SELECT and a parameters object.
+
+1) Body path example (browser/fetch):
+```javascript
+setConfig({
+  apiUrl: "https://api.example.com",
+  options: {},
+  dataExtractor: (d) => d.items,
+  paginationToken: { param: "cursor", responsePath: "next" }
+});
+
+await http.get("users", { limit: 2 });      // -> GET /users?limit=2
+await http.get("users", { limit: 2 });      // -> GET /users?limit=2&cursor=<stored-token>
+```
+
+2) Header example (browser/fetch):
+```javascript
+setConfig({
+  apiUrl: "https://api.example.com",
+  options: {},
+  dataExtractor: (d) => d.items,
+  paginationToken: { param: "pageToken", responseHeader: "x-next-token" }
+});
+```
+
+3) Node provider example:
+```javascript
+const nodeProvider = async (opts) => {
+  // your provider implementation
+  return { status: 200, data: { items: [1], next: "NP-1" } };
+};
+
+setConfig({
+  apiUrl: "https://api.example.com",
+  options: {},
+  nodeProvider,
+  paginationToken: { param: "cursor", responsePath: "next" }
+});
+
+await http.get("entries", { q: "x" });     // -> https://api.example.com/entries?q=x
+await http.get("entries", { q: "x" });     // -> https://api.example.com/entries?q=x&cursor=NP-1
+```
+
+Tips:
+- Resetting: Calling setConfig(...) resets the stored pagination state.
+- Non-GET requests: POST/PUT/DELETE are unaffected by pagination.
+- Changing parameters: If you change a non-token query parameter or endpoint, Querty treats it as a new sequence.
 
 #### Performance
 

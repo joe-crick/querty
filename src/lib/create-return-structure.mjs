@@ -1,4 +1,3 @@
-import { intersection } from "./intersection.mjs";
 import camelCase from "to-camel-case";
 import { fullJoin, join, leftJoin } from "array-join";
 import { makeArray } from "./makeArray.mjs";
@@ -74,13 +73,11 @@ function applyHaving(results, entities, havingStr, isJoin) {
     const key = parsed.field.includes(DOT) ? parsed.field.split(DOT)[1] : parsed.field;
     return entities.reduce((out, entity) => {
       const arr = results[entity];
-      if (!Array.isArray(arr)) {
-        out[entity] = arr;
-        return out;
-      }
       // If HAVING is scoped to a specific entity, only apply to that entity; otherwise apply to all
       out[entity] =
-        targetEntity && targetEntity !== entity ? arr : arr.filter((row) => matchHaving(row?.[key], parsed));
+        !Array.isArray(arr) || (targetEntity && targetEntity !== entity)
+          ? arr
+          : arr.filter((row) => matchHaving(row?.[key], parsed));
       return out;
     }, {});
   }
@@ -200,91 +197,93 @@ function groupJoinedResults(results, groupByFields) {
 }
 
 function groupObjectSets(results, entities, groupByFields) {
-  const output = {};
-  for (let i = 0; i < entities.length; i++) {
-    const entity = entities[i];
+  return entities.reduce((acc, entity) => {
     const data = results[entity];
-    if (!Array.isArray(data)) {
-      output[entity] = data;
-      continue;
+    if (Array.isArray(data)) {
+      // Remove entity scope from groupBy keys for this entity
+      const keys = removeEntityScopePrefixes(groupByFields, entity).map((k) => (k.includes(AS) ? k.split(AS)[0] : k));
+      acc[entity] = groupArrayByKeys(data, keys);
+    } else {
+      acc[entity] = data;
     }
-    // Remove entity scope from groupBy keys for this entity
-    const keys = removeEntityScopePrefixes(groupByFields, entity).map((k) => (k.includes(AS) ? k.split(AS)[0] : k));
-    output[entity] = groupArrayByKeys(data, keys);
-  }
-  return output;
+    return acc;
+  }, {});
 }
 
 function groupArrayByKeys(arr, keys) {
   if (!keys || keys.length === 0) return arr;
-  const map = new Map();
-  for (let i = 0; i < arr.length; i++) {
-    const row = arr[i];
+  const uniqueRowsByCompositeKey = arr.reduce((map, row) => {
     const composite = keys.map((k) => String(row?.[k])).join(KEY_DELIM);
     if (!map.has(composite)) {
       map.set(composite, row);
     }
-  }
-  return Array.from(map.values());
+    return map;
+  }, new Map());
+  return Array.from(uniqueRowsByCompositeKey.values());
 }
 
 function joinResults(conditions, resultSet) {
-  const [firstJoin] = conditions.join;
-  const joinType = toJoinKey(firstJoin);
-  const joinConds = conditions.joinCond;
-  const values = Object.values(resultSet);
+  const { join, joinCond } = conditions;
+  const tables = Object.values(resultSet).map(makeArray);
+  const [firstTable, ...restTables] = tables;
 
-  const [first, second, ...rest] = values;
-  const [key1, key2] = joinConds[0];
-
-  const joinFn = selectJoin(joinType);
-  let base = performJoin(joinFn, makeArray(first), makeArray(second), key1, key2, mergePreserveLeftId);
-
-  for (let x = 0; x < rest.length; x++) {
-    const nextIdx = x + 1;
-    const nextJoinType = toJoinKey(conditions.join[nextIdx]);
-    const [k1, k2] = joinConds[nextIdx];
-    const nextJoinFn = selectJoin(nextJoinType);
-    const merger = nextJoinType === FULL_JOIN ? mergeShallow : mergePreserveLeftId;
-    base = performJoin(nextJoinFn, base, rest[x], k1, k2, merger);
-  }
-
-  return base;
+  return restTables.reduce((left, right, i) => {
+    const joinType = toJoinKey(join[i]);
+    const [k1, k2] = joinCond[i];
+    const joinFn = selectJoin(joinType);
+    const merger = i > 0 && joinType === FULL_JOIN ? mergeShallow : mergePreserveLeftId;
+    return performJoin(joinFn, left, right, k1, k2, merger);
+  }, firstTable);
 }
 
 function getEntityScopedResult(entities, result, fields, joinCond) {
-  const results = {};
-  for (let x = 0; x < entities.length; x++) {
-    const entity = entities[x];
-    const data = getEntityData(result, x);
+  const singleEntity = entities.length === 1;
+  return entities.reduce((acc, entity, i) => {
+    const data = getEntityData(result, i, entity);
     const [sample] = data;
-    results[entity] = sample ? getFields(fields, entity, sample, joinCond, data) : [];
-  }
-  return results;
+    acc[entity] = sample ? getFields(fields, entity, sample, joinCond, data, singleEntity) : [];
+    return acc;
+  }, {});
 }
 
-function getFields(fields, entity, sample, joinCond, data) {
+function getFields(fields, entity, sample, joinCond, data, singleEntity) {
   // if the query has any entity-scoped fields, e.g., users.name, remove any entity-scoping appropriate to this entity
   const entityScopedFields = removeEntityScopePrefixes(fields, entity);
-  const deAliasedFields = entityScopedFields.map((field) => {
-    return field.includes(AS) ? field.split(AS)[0] : field;
-  });
-  // Get the fields from this query that match the fields on the returned data
-  let entityFields = intersection(deAliasedFields, Object.keys(sample));
+  if (isAllFields(entityScopedFields)) return data;
 
-  if (joinCond) {
-    const addFields = Array.from(new Set(joinCond.flat()));
-    entityFields = entityFields.concat(addFields);
-  }
-  return isAllFields(entityScopedFields) ? data : extractFields(entityFields, entityScopedFields, data);
+  const deAliasedFields = entityScopedFields.map((field) => (field.includes(AS) ? field.split(AS)[0] : field));
+  // Build the set of fields requested for THIS entity only (drop fields that still contain a dot)
+  const deAliasedEntityFields = deAliasedFields.filter((f) => f !== WILDCARD && !f.includes(DOT));
+  const baseFields = getBaseFields(singleEntity, deAliasedEntityFields, data);
+
+  const joinFields = joinCond ? [...new Set(joinCond.flat())] : [];
+  const entityFields = [...baseFields, ...joinFields];
+  return extractFields(entityFields, entityScopedFields, data);
+}
+
+function getBaseFields(singleEntity, deAliasedEntityFields, data) {
+  return singleEntity
+    ? // For single-entity selects, include all selected fields for that entity
+      [...new Set(deAliasedEntityFields)]
+    : // For multi-entity object sets, include only fields that exist on at least one row
+      (() => {
+        const unionKeys = new Set(data.flatMap((row) => (row && typeof row === "object" ? Object.keys(row) : [])));
+        return [...new Set(deAliasedEntityFields.filter((f) => unionKeys.has(f)))];
+      })();
 }
 
 function isAllFields(parsedFields) {
   return parsedFields.includes(WILDCARD);
 }
 
-function getEntityData(result, x) {
-  return Array.isArray(result[x][DATA]) ? result[x][DATA] : [result[x][DATA]];
+function getEntityData(result, x, entity) {
+  const payload = result[x][DATA];
+  if (Array.isArray(payload)) return payload;
+  if (payload && typeof payload === "object" && Object.prototype.hasOwnProperty.call(payload, entity)) {
+    const inner = payload[entity];
+    return Array.isArray(inner) ? inner : [inner];
+  }
+  return [payload];
 }
 
 /**
@@ -305,23 +304,13 @@ function removeEntityScopePrefixes(fields, entity) {
 
 function extractFields(entityFields, entityScopedFields, data) {
   const aliasMap = getAliasMap(entityScopedFields);
-
-  // Optimising processing using for loops
-  const filteredSet = [];
-  for (let i = 0; i < data.length; i++) {
-    const fullObject = data[i];
-    const partial = {};
-    for (let n = 0; n < entityFields.length; n++) {
-      const cur = entityFields[n];
+  return data.map((fullObject) =>
+    entityFields.reduce((partial, cur) => {
       const prop = aliasMap[cur] || cur;
-      if (Object.prototype.hasOwnProperty.call(fullObject, cur)) {
-        partial[prop] = fullObject[cur];
-      }
-    }
-    filteredSet.push(partial);
-  }
-
-  return filteredSet;
+      partial[prop] = Object.prototype.hasOwnProperty.call(fullObject, cur) ? fullObject[cur] : null;
+      return partial;
+    }, {})
+  );
 }
 
 function getAliasMap(entityScopedFields) {

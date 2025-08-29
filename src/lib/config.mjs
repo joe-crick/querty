@@ -1,7 +1,10 @@
 let _config;
+let _pagination = new Map(); // key -> { token: string|undefined, hasMore: boolean, param: string }
 
 export function setConfig(conf) {
   _config = conf;
+  // Reset pagination state on new config
+  _pagination = new Map();
 }
 
 let addons;
@@ -73,6 +76,75 @@ export const config = {
   },
   get path() {
     return _config.path || { url: "", config: {} };
+  },
+  // Pagination support
+  hasPagination() {
+    return Boolean(_config && _config.paginationToken);
+  },
+  getPaginationSpec() {
+    return _config.paginationToken || {};
+  },
+  getPaginationParamName() {
+    const spec = this.getPaginationSpec();
+    return spec.param || spec.requestParam || "paginationToken";
+  },
+  // Build a stable key for a request form (endpoint + query excluding pagination param)
+  buildPaginationKey(baseUrl, queryString, paramName) {
+    if (!queryString) return baseUrl;
+    // Remove pagination token param from key
+    const parts = queryString.split("&").filter((p) => !p.startsWith(`${paramName}=`));
+    parts.sort(); // ensure deterministic ordering
+    const qs = parts.join("&");
+    return qs ? `${baseUrl}?${qs}` : baseUrl;
+  },
+  getPaginationState(key) {
+    return _pagination.get(key);
+  },
+  setPaginationState(key, state) {
+    _pagination.set(key, state);
+  },
+  clearPaginationState(key) {
+    _pagination.delete(key);
+  },
+  hasMore(key) {
+    const s = _pagination.get(key);
+    return Boolean(s && s.hasMore);
+  },
+  extractNextToken(rawData, extractedData, headers) {
+    const spec = this.getPaginationSpec();
+    const getter = (obj, path) => {
+      if (!obj || !path) return undefined;
+      const segs = path.split(".");
+      let cur = obj;
+      for (let i = 0; i < segs.length; i++) {
+        const k = segs[i];
+        if (cur && Object.prototype.hasOwnProperty.call(cur, k)) {
+          cur = cur[k];
+        } else {
+          return undefined;
+        }
+      }
+      return cur;
+    };
+    if (typeof spec.responsePath === "function") {
+      try {
+        return spec.responsePath({ data: rawData, extracted: extractedData, headers });
+      } catch (_) {
+        return undefined;
+      }
+    }
+    let token;
+    if (spec.responseHeader && headers && typeof headers.get === "function") {
+      token = headers.get(spec.responseHeader);
+      if (token) return token;
+    }
+    if (spec.responsePath) {
+      token = getter(rawData, spec.responsePath);
+      if (token == null && extractedData && extractedData !== rawData) {
+        token = getter(extractedData, spec.responsePath);
+      }
+    }
+    return token;
   }
 };
 
