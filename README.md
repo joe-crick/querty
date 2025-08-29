@@ -803,6 +803,49 @@ Notes:
 - Debug mode applies to both Querty’s built-in fetch-based requester and when using a Node `nodeProvider`. When using a custom `nodeProvider`, Querty logs the URL and a safe snapshot of the options it passes (method, headers, body). If your provider further transforms options internally, the console output reflects the pre-transformed options.
 - Disable by removing the debug property or setting `debug: false`.
 
+##### Raw response logging (optional)
+
+Querty can also (optionally) log the raw response body and headers returned by your API for easier troubleshooting. This works in both browser/fetch and nodeProvider modes.
+
+Requirements:
+- Enable `debug: true` (as above), and
+- Enable one of the following flags to turn on raw-response logging:
+  - Top-level flag: `debugRawResponse: true`, or
+  - Nested flag: `debug: { responseRaw: true }`
+
+Examples:
+
+```javascript
+// Top-level flag
+setConfig({
+  apiUrl: "https://my-api.com",
+  debug: true,
+  debugRawResponse: true
+});
+
+// OR nested flag
+setConfig({
+  apiUrl: "https://my-api.com",
+  debug: { responseRaw: true }
+});
+```
+
+Example console output:
+
+```
+[querty][debug] api response: {
+  url: "https://my-api.com/todos",
+  status: undefined,
+  headers: { "content-type": "application/json" },
+  raw: { /* unmodified JSON body as returned by the server */ }
+}
+```
+
+Notes:
+- Headers objects (e.g., the browser’s `Headers`) are normalized to a plain object where possible for readability.
+- The `raw` payload is the unmodified body returned by the server, logged before any dataExtractor or pagination processing.
+- Be careful not to enable this in production with sensitive data; prefer local/dev environments.
+
 #### Cancellation
 
 You can cancel Browser-based requests by setting the `canCancel` property in the `config` to `true`. If you do this,

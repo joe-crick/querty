@@ -36,14 +36,17 @@ function preparePaginationData(url, data, host) {
   const baseUrl = `${host}/${url}`;
   const paginationKey = config.buildPaginationKey(baseUrl, qs, paginationParam);
   const state = config.getPaginationState(paginationKey);
-  const finalData = state && state.token ? { ...(data || {}), [paginationParam]: state.token } : data;
-  return { finalData, paginationKey, paginationParam };
+  const token = state && state.token;
+  const finalData = token ? { ...(data || {}), [paginationParam]: token } : data;
+  return { finalData, paginationKey, paginationParam, token };
 }
 
 function buildRequestOptions({ url, method, data, finalData, host, options, pagination, isGetData }) {
+  const qs = isGetData ? objectToQueryParams(finalData || {}) : "";
+  const fullUrl = `${host}/${url}${qs ? `?${qs}` : ""}`;
   const opts = {
     method,
-    url: `${host}/${url}${isGetData ? `?${objectToQueryParams(finalData)}` : ""}`,
+    url: fullUrl,
     json: true,
     ...(!isGetData ? { body: data } : {}),
     ...options
@@ -52,6 +55,15 @@ function buildRequestOptions({ url, method, data, finalData, host, options, pagi
   if (pagination && pagination.paginationKey) {
     opts.__paginationKey = pagination.paginationKey;
     opts.__paginationParam = pagination.paginationParam;
+    // Mark whether a token was applied and include a masked preview for debug
+    if (pagination.token) {
+      const t = String(pagination.token);
+      const masked = t.length <= 6 ? "***" : `${t.slice(0, 3)}***${t.slice(-3)}`;
+      opts.__paginationApplied = true;
+      opts.__paginationTokenPreview = masked;
+    } else {
+      opts.__paginationApplied = false;
+    }
   }
   return opts;
 }
@@ -67,7 +79,7 @@ function executeRequestWithPolicy(requester, opts, url) {
 }
 
 function run(url, method, data) {
-  const isGetData = data && method === "GET";
+  const isGetData = method === "GET";
   const { host, options } = getRequestDetails(url);
 
   const pagination = isGetData ? preparePaginationData(url, data, host) : {};
@@ -115,6 +127,8 @@ function getNodeRequesterWrapper(provider) {
   return async function (opts, iterations = 0, conf, url) {
     try {
       const res = await provider(opts, iterations, conf, url);
+      // Optional debug of raw response for node provider
+      logDebugResponse(opts, res?.data, res?.headers);
       if (conf?.hasPagination && conf.hasPagination() && opts.__paginationKey) {
         const processed = applyPaginationPostProcessing(opts, res.data, res.data, res.headers);
         return { ...res, data: processed };
@@ -139,10 +153,18 @@ function applyPaginationPostProcessing(opts, rawData, extractedData, headers) {
     const nextToken = config.extractNextToken(rawData, extractedData, headers);
     if (nextToken) {
       config.setPaginationState(key, { token: nextToken, hasMore: true, param });
+      if (config.hasDebug()) {
+        const t = String(nextToken);
+        const masked = t.length <= 6 ? "***" : `${t.slice(0, 3)}***${t.slice(-3)}`;
+        console.log("[querty][debug] pagination: stored next token", { key, param, token: masked });
+      }
       return extractedData;
     }
     // No next token found
     if (prev && prev.token) {
+      if (config.hasDebug()) {
+        console.log("[querty][debug] pagination: end of pages (clearing state)", { key, param });
+      }
       // We were paginating; end of pages -> clear and return empty array
       config.clearPaginationState(key);
       return Array.isArray(extractedData) ? [] : [];
@@ -166,7 +188,40 @@ function debugFetch(fetchOptions, opts) {
 }
 
 function logDebug(opts, debugOptions) {
-  console.log("[querty][debug] api request:", { url: opts.url, options: debugOptions });
+  const pagination = opts.__paginationKey
+    ? {
+        key: opts.__paginationKey,
+        param: opts.__paginationParam,
+        applied: Boolean(opts.__paginationApplied),
+        token: opts.__paginationTokenPreview || undefined
+      }
+    : undefined;
+  console.log("[querty][debug] api request:", {
+    url: opts.url,
+    options: debugOptions,
+    ...(pagination ? { pagination } : {})
+  });
+}
+
+function logDebugResponse(opts, raw, headers) {
+  if (!config.hasDebug() || !config.hasDebugResponseRaw()) return;
+  let safeHeaders = headers;
+  try {
+    if (headers && typeof headers.entries === "function") {
+      // Convert Headers to plain object for logging
+      const obj = {};
+      for (const [k, v] of headers.entries()) obj[k] = v;
+      safeHeaders = obj;
+    }
+  } catch (_) {
+    // noop
+  }
+  console.log("[querty][debug] api response:", {
+    url: opts.url,
+    status: undefined,
+    headers: safeHeaders,
+    raw
+  });
 }
 
 function getFetchOptions(opts) {
@@ -186,6 +241,8 @@ function getFetchOptions(opts) {
 
 async function handleSuccessfulResponse(response, opts) {
   const rawJson = await response.json();
+  // Optional debug of raw response
+  logDebugResponse(opts, rawJson, response.headers);
   let extracted = config.dataExtractor(rawJson);
   // Pagination handling (web fetch has headers)
   if (config.hasPagination() && opts.__paginationKey) {

@@ -55,7 +55,14 @@ export const config = {
     _config.cancelController = controller;
   },
   hasDebug() {
-    return Boolean(_config.debug);
+    return Boolean(_config?.debug);
+  },
+  hasDebugResponseRaw() {
+    // Support either a top-level boolean flag or a nested flag in debug object
+    // - debugRawResponse: true
+    // - debug: { responseRaw: true }
+    const dbg = _config?.debug;
+    return Boolean(_config?.debugRawResponse || (dbg && typeof dbg === "object" && dbg.responseRaw));
   },
   hasNodeProvider() {
     return _config.hasOwnProperty("nodeProvider");
@@ -159,8 +166,36 @@ export const config = {
       }
     }
     let token;
-    if (spec.responseHeader && headers && typeof headers.get === "function") {
-      token = headers.get(spec.responseHeader);
+    // Robust header lookup Across different shapes (Headers-like, plain object, Map, array of tuples)
+    const getHeaderValue = (hdrs, name) => {
+      if (!hdrs || !name) return undefined;
+      const tryName = String(name);
+      const lower = tryName.toLowerCase();
+      if (typeof hdrs.get === "function") {
+        // Headers-like objects are case-insensitive internally
+        const val = hdrs.get(tryName) ?? hdrs.get(lower);
+        if (val != null) return val;
+      }
+      // Plain object with possibly lower-cased keys
+      if (typeof hdrs === "object" && !Array.isArray(hdrs)) {
+        const val = hdrs[tryName] ?? hdrs[lower];
+        if (val != null) return val;
+      }
+      // Map
+      if (hdrs instanceof Map) {
+        const val = hdrs.get(tryName) ?? hdrs.get(lower);
+        if (val != null) return val;
+      }
+      // Array of tuples
+      if (Array.isArray(hdrs)) {
+        const found = hdrs.find(([k]) => String(k).toLowerCase() === lower);
+        if (found) return found[1];
+      }
+      return undefined;
+    };
+
+    if (spec.responseHeader) {
+      token = getHeaderValue(headers, spec.responseHeader);
       if (token) return token;
     }
     if (spec.responsePath) {

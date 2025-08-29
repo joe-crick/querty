@@ -1,5 +1,6 @@
 import { setConfig } from "../src/lib/config.mjs";
 import { http } from "../src/lib/http-client/http.mjs";
+import { exec } from "../src/querty.mjs";
 
 // Utilities
 function createHeaders(map = {}) {
@@ -90,6 +91,32 @@ describe("pagination token support - web fetch", () => {
     // End of pages -> []
     expect(r2.data).toEqual([]);
   });
+
+  it("appends token when no user query params are provided (empty params)", async () => {
+    setConfig({
+      apiUrl: "https://api",
+      options: {},
+      dataExtractor: (d) => d.items,
+      paginationToken: { param: "cursor", responsePath: "next" }
+    });
+
+    mockFetchResponseSequence([
+      { status: 200, data: { items: [1], next: "tok-2" }, headers: createHeaders() },
+      { status: 200, data: { items: [2] }, headers: createHeaders() }
+    ]);
+
+    // First call without any params
+    await http.get("widgets");
+    const firstUrl = global.fetch.mock.calls[0][0];
+    expect(firstUrl).toBe("https://api/widgets");
+
+    // Second call should include the stored token even though original call had no params
+    const r2 = await http.get("widgets");
+    const secondUrl = global.fetch.mock.calls[1][0];
+    expect(secondUrl).toBe("https://api/widgets?cursor=tok-2");
+    // End of pages -> []
+    expect(r2.data).toEqual([]);
+  });
 });
 
 describe("pagination token support - node provider", () => {
@@ -129,4 +156,35 @@ describe("pagination token support - node provider", () => {
     // End of pagination -> []
     expect(r2.data).toEqual([]);
   });
+});
+
+// Additional test: SELECT path with function responsePath and nextPageToken param
+it("appends nextPageToken for SELECT query using function responsePath", async () => {
+  setConfig({
+    apiUrl: "https://api",
+    options: {},
+    dataExtractor: (d) => d.items,
+    paginationToken: {
+      param: "nextPageToken",
+      responsePath: ({ data }) => data?.nextPageToken
+    }
+  });
+
+  mockFetchResponseSequence([
+    { status: 200, data: { items: [1, 2], nextPageToken: "tokA" }, headers: createHeaders() },
+    { status: 200, data: { items: [3] }, headers: createHeaders() }
+  ]);
+
+  // First SELECT call via exec
+  await exec("SELECT * FROM things", { limit: 2 });
+  const firstUrl = global.fetch.mock.calls[0][0];
+  expect(firstUrl).toBe("https://api/things?limit=2");
+
+  // Second SELECT call should include nextPageToken
+  const r2 = await exec("SELECT * FROM things", { limit: 2 });
+  const secondUrl = global.fetch.mock.calls[1][0];
+  expect(secondUrl).toBe("https://api/things?limit=2&nextPageToken=tokA");
+  // End-of-pages behavior -> []
+  // r2 is an object set: { things: [...] }
+  expect(r2.things).toEqual([]);
 });
