@@ -16,7 +16,7 @@ bugs you may find to the GitHub repo. Many thanks!
 - [Selecting object sets](#selecting-object-sets)
 - [Column Aliasing](#column-aliasing)
 - [JSON Property Accessors](#json-property-accessors)
-- [Path Maps: Nested Routes, and Aliasing](#path-maps--nested-routes--and-aliasing)
+- [Path Maps: Nested Routes, and Aliasing](#path-maps-nested-routes-and-aliasing)
 - [Query Parameters](#query-parameters)
 - [Headers and Authentication](#headers-and-authentication)
   * [Refresh Tokens](#refresh-tokens)
