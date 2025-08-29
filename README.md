@@ -65,6 +65,8 @@ Finally, please note that Querty currently only supports working with JSON data.
 
 #### Change the way you think about working with API Data
 
+[Back to TOC](#table-of-contents)
+
 There are a ton of really great http clients out there, like:
 
 - axios
@@ -179,6 +181,8 @@ await exec(`UPDATE posts WHERE id = 1`, { title: "Alfred Schmidt", body: "Frankf
 
 #### Use with Node
 
+[Back to TOC](#table-of-contents)
+
 Stand alone Querty only works in the Browser. However, making Querty Isomorphic (enabling it to work in Node and the Browser)
 is quite simple.
 
@@ -197,6 +201,8 @@ const config = {
 Afer implementing this configuration, Querty will be Isomorphic.
 
 #### Defining Endpoints
+
+[Back to TOC](#table-of-contents)
 
 Querty supports two modes of defining endpoints:
 
@@ -252,6 +258,8 @@ const config = {
 
 #### Return Data
 
+[Back to TOC](#table-of-contents)
+
 Querty returns data in one of two formats:
 
 1. Raw Data: An Array of data is returned.
@@ -282,6 +290,8 @@ Querty returns data in one of two formats:
 ```
 
 #### Supported SQL Features
+
+[Back to TOC](#table-of-contents)
 
 Querty implements a subset of SQL to provide a familiar syntax for working with REST API data. This section details the SQL commands and features supported by Querty.
 
@@ -430,6 +440,8 @@ await exec("SELECT title AS headline FROM posts");
 
 #### Selects with Joins
 
+[Back to TOC](#table-of-contents)
+
 Querty has support for performing joins. Because Join queries are an amalgamation of endpoint data, they return Raw Data.
 Additionally, the `id` parameters used for joining will be automatically included in the final data.
 The following join types are supported:
@@ -468,6 +480,8 @@ of that join is joined with `todos`.
 
 #### Selecting object sets
 
+[Back to TOC](#table-of-contents)
+
 If you select data from multiple endpoints without a JOIN clause, Querty will return an Object with the results for each endpoint scoped
 to a property.
 
@@ -505,6 +519,8 @@ const state = await exec("SELECT users.name, title FROM users, posts WHERE users
 
 #### Column Aliasing
 
+[Back to TOC](#table-of-contents)
+
 Column aliasing is supported, as in the following example using `Svelte`:
 
 ```javascript
@@ -536,6 +552,8 @@ Column aliasing is supported, as in the following example using `Svelte`:
 ```
 
 #### JSON Property Accessors
+
+[Back to TOC](#table-of-contents)
 
 Querty supports Postgres-style JSON access operators in SELECT field lists. This lets you extract nested properties from JSON columns/fields in your API responses without custom post-processing.
 
@@ -572,6 +590,8 @@ Notes
 - Missing paths yield null (or string null for ->> if underlying value is null/undefined).
 
 #### Path Maps: Nested Routes, and Aliasing
+
+[Back to TOC](#table-of-contents)
 
 Querty supports nested routes:
 
@@ -633,6 +653,8 @@ from the query above would be scoped to a `people` property, not a `users` prope
 
 #### Query Parameters
 
+[Back to TOC](#table-of-contents)
+
 There are two ways of providing query parameters:
 
 1. Using `pathMap` (supported for all `exec` types: e.g., `INSERT`, `UPDATE`, etc.):
@@ -656,6 +678,8 @@ Of the two methods, Option 2, the Parameters Object is the recommended method.
 
 #### Headers and Authentication
 
+[Back to TOC](#table-of-contents)
+
 You can provide any standard set of `fetch` options to Querty---which can be useful, for example,
 if you need to access restricted endpoints.
 
@@ -677,6 +701,8 @@ setConfig(config);
 ```
 
 ##### Refresh Tokens
+
+[Back to TOC](#table-of-contents)
 
 If you are working with an API that supports refresh tokens, you can provide the `config` with a
 `refresh` function that will run should Querty encounter a 401 (Unauthorised) response. This function
@@ -711,6 +737,8 @@ setConfig(config);
 ```
 
 #### Cockatiel Policies
+
+[Back to TOC](#table-of-contents)
 
 Querty supports the use of [`cockatiel` `Policies`](https://www.npmjs.com/package/cockatiel) for all requests, or specific endpoints. **NOTE**:
 `cockatiel` _makes use of the Browser's `AbortSignal` and, therefore, only works in the Browser_.
@@ -760,11 +788,15 @@ const app = new Vue({
 
 #### Request Interception
 
+[Back to TOC](#table-of-contents)
+
 Querty does not come with an interceptor built in. However, because it uses `fetch` internally, you can intercept
 requests using [`fetch-intercept`](https://www.npmjs.com/package/fetch-intercept) (which,
 according to the docs, also supports Node). For more information, see the `fetch-intercept` docs.
 
 #### Debug mode
+
+[Back to TOC](#table-of-contents)
 
 You can enable a built-in debug mode to log each request that Querty makes with fetch. When enabled, Querty prints the request URL and a safe snapshot of the fetch options just before the request is sent.
 
@@ -848,6 +880,8 @@ Notes:
 
 #### Cancellation
 
+[Back to TOC](#table-of-contents)
+
 You can cancel Browser-based requests by setting the `canCancel` property in the `config` to `true`. If you do this,
 Querty will add an `AbortController` to the `cancelController` property on the `config`, which you can call to
 abort the request, as below:
@@ -866,6 +900,8 @@ config.cancelController.abort();
 ```
 
 #### Data Extraction
+
+[Back to TOC](#table-of-contents)
 
 By default, Querty expects that the data returned from an API will be in an immediately usable format (i.e., it can
 have direct access to the data you requested). Not all APIs return data in this way. If you need to be able to format
@@ -893,6 +929,8 @@ getData(12);
 ```
 
 #### Pagination Tokens
+
+[Back to TOC](#table-of-contents)
 
 Querty can automatically handle cursor-based pagination for GET requests by storing and reusing a pagination token between calls.
 
@@ -990,11 +1028,15 @@ Tips:
 
 #### Performance
 
+[Back to TOC](#table-of-contents)
+
 In our preliminary tests, we found that Querty was quite performant!
 In one test, it outpeformed a major http-client by 4 to 1. We'd perfer to not name names. Rather, we encourage you to test it
 for yourself.
 
 #### Addons
+
+[Back to TOC](#table-of-contents)
 
 Querty has an API for creating addons to extend its functionality. Using an addon, you can inject functionality into
 two stages:
