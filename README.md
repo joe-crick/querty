@@ -1,10 +1,5 @@
 # <img src='https://raw.githubusercontent.com/joe-crick/querty/master/Querty.png' height='60' alt='Querty Logo' aria-label='querty' /> Querty
 
-## Querty is currently in _Beta_
-
-While Querty's MVP is complete, it is still undergoing testing. If you're using it, please report any 
-bugs you may find to the GitHub repo. Many thanks!
-
 ## Table of contents
 
 - [Change the way you think about working with API Data](#change-the-way-you-think-about-working-with-api-data)
