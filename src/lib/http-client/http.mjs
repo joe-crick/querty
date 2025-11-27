@@ -240,7 +240,7 @@ function getFetchOptions(opts) {
 }
 
 async function handleSuccessfulResponse(response, opts) {
-  const rawJson = await response.json();
+  const rawJson = response.status === 204 ? {} : await response.json();
   // Optional debug of raw response
   logDebugResponse(opts, rawJson, response.headers);
   let extracted = config.dataExtractor(rawJson);
